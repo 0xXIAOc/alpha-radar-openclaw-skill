@@ -10,39 +10,52 @@ It does not replace official Binance skills. It orchestrates them into five sect
 4. 今日观察钱包 / 聪明钱附录
 5. 今日结论
 
+## Why this version is stronger
+
+Compared with the earlier scaffold, this version adds:
+
+- stricter input validation with Zod;
+- a modular renderer (`src/schema.js` + `src/render.js`);
+- built-in tests with Node's native test runner;
+- better OpenClaw metadata for load-time gating;
+- a clearer architecture diagram;
+- a lock file for reproducible installs.
+
 ## Repo structure
 
 ```text
 .
+├── .editorconfig
+├── .github/
+│   └── workflows/
+│       └── check.yml
+├── .gitignore
+├── .prettierrc.json
+├── CONTRIBUTING.md
+├── LICENSE
+├── README.md
 ├── SKILL.md
+├── package-lock.json
 ├── package.json
-├── scripts/
-│   └── render-report.js
+├── docs/
+│   ├── DATA_SCHEMA.zh-CN.md
+│   ├── DEMO_SCRIPT.zh-CN.md
+│   ├── SUBMISSION_CHECKLIST.zh-CN.md
+│   └── VIDEO_OUTLINE.zh-CN.md
 ├── examples/
 │   ├── sample-data.json
 │   ├── sample-report.md
 │   └── sample-square.txt
-├── docs/
-│   ├── DEMO_SCRIPT.zh-CN.md
-│   ├── VIDEO_OUTLINE.zh-CN.md
-│   └── SUBMISSION_CHECKLIST.zh-CN.md
-└── .github/
-    └── workflows/
-        └── check.yml
+├── scripts/
+│   └── render-report.js
+├── src/
+│   ├── render.js
+│   └── schema.js
+└── test/
+    └── render-report.test.js
 ```
 
-## What this repository is for
-
-Use this repository when you want to:
-
-- install the skill locally in OpenClaw;
-- upload the code to GitHub for a hackathon / challenge submission;
-- show a reviewer that the project has a clear workflow, not just a prompt;
-- generate report previews before optionally sending a short version to Binance Square.
-
 ## Install locally
-
-If you cloned this repository locally, copy it into your OpenClaw workspace:
 
 ```bash
 mkdir -p ~/.openclaw/workspace/skills
@@ -53,15 +66,11 @@ Then refresh skills or restart OpenClaw.
 
 ## Add from GitHub
 
-After you push this repo to GitHub:
-
 ```bash
 openclaw skills add https://github.com/0xXIAOc/alpha-radar-openclaw-skill
 ```
 
 ## Also install official Binance skills
-
-This repo expects the official Binance skills to be available inside OpenClaw.
 
 ```bash
 npx skills add binance/binance-skills-hub
@@ -73,6 +82,7 @@ npx skills add binance/binance-skills-hub
 npm install
 npm run report
 npm run square
+npm run test
 npm run check
 ```
 
@@ -81,27 +91,7 @@ Generated files:
 - `examples/sample-report.md`
 - `examples/sample-square.txt`
 
-## Report data contract
-
-The formatter expects a JSON payload like `examples/sample-data.json`.
-
-Minimal shape:
-
-```json
-{
-  "chain": "Solana",
-  "window": "24h",
-  "marketTheme": { "summary": "..." },
-  "watchlist": [],
-  "riskAlerts": [],
-  "walletAppendix": { "summary": "..." },
-  "conclusion": []
-}
-```
-
 ## Supported input modes
-
-The renderer supports both:
 
 ### File input
 
@@ -115,46 +105,58 @@ node scripts/render-report.js --input examples/sample-data.json --style report
 cat examples/sample-data.json | node scripts/render-report.js --style report
 ```
 
-This makes it easier for OpenClaw to pass normalized JSON directly into the formatter.
+## Architecture
 
-## Recommended OpenClaw workflow
+```mermaid
+flowchart LR
+    A[User request] --> B[OpenClaw]
+    B --> C[Official Binance Skills]
+    C --> D[Normalized JSON payload]
+    D --> E[scripts/render-report.js]
+    E --> F[Structured report preview]
+    F --> G[Optional Square draft]
+    G --> H[Publish after confirmation]
+```
 
-1. User asks for a daily report.
-2. OpenClaw calls official Binance skills to fetch market, token, signal, audit, and wallet data.
-3. OpenClaw normalizes those raw results into the JSON schema used here.
-4. OpenClaw runs `scripts/render-report.js`.
-5. OpenClaw returns a preview.
-6. If the user wants a Binance Square post, OpenClaw renders the `square` style and posts only after confirmation.
+## Minimal JSON shape
+
+```json
+{
+  "chain": "Solana",
+  "window": "24h",
+  "marketTheme": { "summary": "..." },
+  "watchlist": [],
+  "riskAlerts": [],
+  "walletAppendix": { "summary": "..." },
+  "conclusion": []
+}
+```
+
+Detailed field guidance: `docs/DATA_SCHEMA.zh-CN.md`
 
 ## Security notes
 
 - Do not hardcode API keys in this repository.
 - Keep Square posting keys and exchange API keys out of Git.
 - Default to preview first, then publish.
-
-## Demo materials included
-
-See:
-
-- `docs/DEMO_SCRIPT.zh-CN.md`
-- `docs/VIDEO_OUTLINE.zh-CN.md`
-- `docs/SUBMISSION_CHECKLIST.zh-CN.md`
+- This repository itself does not require exchange credentials; those belong in the official Binance skills that fetch data or post content.
 
 ## Repository
-
-Current repository:
 
 ```text
 https://github.com/0xXIAOc/alpha-radar-openclaw-skill
 ```
 
-## Suggested Git commit flow
+## Suggested GitHub About settings
 
-```bash
-git init
-git add .
-git commit -m "feat: initial Alpha Radar OpenClaw skill"
-git branch -M main
-git remote add origin https://github.com/0xXIAOc/alpha-radar-openclaw-skill.git
-git push -u origin main
+Description:
+
+```text
+OpenClaw skill for rendering Binance market data into a structured watchlist, risk alert, and Binance Square draft.
+```
+
+Topics:
+
+```text
+openclaw skill binance web3 solana bsc square report automation
 ```
