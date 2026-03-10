@@ -1,6 +1,8 @@
 node_modules/
 .DS_Store
 .env
+.env.*
+*.key
 *.log
 *.tmp.json
 coverage/
