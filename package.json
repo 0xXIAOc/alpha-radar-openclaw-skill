@@ -1,0 +1,19 @@
+{
+  "name": "alpha-radar-openclaw-skill",
+  "version": "0.2.0",
+  "private": true,
+  "description": "GitHub-ready OpenClaw custom skill for generating Binance-style market reports.",
+  "license": "MIT",
+  "type": "commonjs",
+  "bin": {
+    "alpha-radar-render": "scripts/render-report.js"
+  },
+  "scripts": {
+    "report": "node scripts/render-report.js --input examples/sample-data.json --style report --output examples/sample-report.md",
+    "square": "node scripts/render-report.js --input examples/sample-data.json --style square --output examples/sample-square.txt",
+    "check": "node scripts/render-report.js --input examples/sample-data.json --style report > /dev/null"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
