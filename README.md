@@ -1,8 +1,8 @@
 # Alpha Radar OpenClaw Skill
 
-Alpha Radar is a **GitHub-ready custom OpenClaw skill** for turning Binance market data into a stable report format.
+Alpha Radar is a GitHub-ready custom OpenClaw skill for turning Binance market data into a stable report format.
 
-It does not replace official Binance skills. It **orchestrates** them into five sections:
+It does not replace official Binance skills. It orchestrates them into five sections:
 
 1. 今日市场主线
 2. 今日值得看名单
@@ -37,16 +37,16 @@ Use this repository when you want to:
 
 - install the skill locally in OpenClaw;
 - upload the code to GitHub for a hackathon / challenge submission;
-- show a reviewer that the project has a **clear workflow**, not just a prompt;
+- show a reviewer that the project has a clear workflow, not just a prompt;
 - generate report previews before optionally sending a short version to Binance Square.
 
 ## Install locally
 
-Copy this repository into your local OpenClaw workspace:
+If you cloned this repository locally, copy it into your OpenClaw workspace:
 
 ```bash
 mkdir -p ~/.openclaw/workspace/skills
-cp -R alpha-radar-github-repo ~/.openclaw/workspace/skills/alpha-radar-report
+cp -R bnbnbn ~/.openclaw/workspace/skills/alpha-radar-report
 ```
 
 Then refresh skills or restart OpenClaw.
@@ -56,7 +56,7 @@ Then refresh skills or restart OpenClaw.
 After you push this repo to GitHub:
 
 ```bash
-openclaw skills add https://github.com/<your-name>/alpha-radar-openclaw-skill
+openclaw skills add https://github.com/0xXIAOc/bnbnbn
 ```
 
 ## Also install official Binance skills
@@ -109,9 +109,9 @@ Minimal shape:
 
 ## Security notes
 
-- Do **not** hardcode API keys in this repository.
+- Do not hardcode API keys in this repository.
 - Keep Square posting keys and exchange API keys out of Git.
-- Default to **preview first**, then publish.
+- Default to preview first, then publish.
 
 ## Demo materials included
 
@@ -121,9 +121,15 @@ See:
 - `docs/VIDEO_OUTLINE.zh-CN.md`
 - `docs/SUBMISSION_CHECKLIST.zh-CN.md`
 
-## Suggested GitHub repo name
+## Repository
 
-`alpha-radar-openclaw-skill`
+Current repository:
+
+```text
+https://github.com/0xXIAOc/bnbnbn
+```
+
+If you later rename the repo to something more descriptive, update the links in this file and in `SKILL.md`.
 
 ## Suggested Git commit flow
 
@@ -132,6 +138,6 @@ git init
 git add .
 git commit -m "feat: initial Alpha Radar OpenClaw skill"
 git branch -M main
-git remote add origin https://github.com/<your-name>/alpha-radar-openclaw-skill.git
+git remote add origin https://github.com/0xXIAOc/bnbnbn.git
 git push -u origin main
 ```
