@@ -46,6 +46,10 @@ function parseArgs(argv) {
       args.contract = argv[++i];
     } else if (token === '--query-type') {
       args.queryType = argv[++i];
+    } else if (token === '--disclosure') {
+      args.disclosure = argv[++i];
+    } else if (token === '--ask-disclosure') {
+      args.askDisclosure = argv[++i];
     } else if (token === '--command') {
       args.command = argv[++i];
     } else if (token === '--help' || token === '-h') {
@@ -82,6 +86,8 @@ function usage() {
     '  --wallet <bool>         true | false',
     '  --token <value>         token symbol/name',
     '  --contract <value>      contract address',
+    '  --disclosure <bool>     square disclosure on/off',
+    '  --ask-disclosure <bool> ask every time on/off',
     '  --command "<raw>"       parse Chinese aliases from raw command'
   ].join('\n');
 }
@@ -192,13 +198,34 @@ function parseNaturalCommand(raw) {
   if (/(^|\s)(钱包关|不看钱包)(\s|$)/.test(text)) result.wallet = 'false';
   if (/(^|\s)(钱包开|看钱包)(\s|$)/.test(text)) result.wallet = 'true';
 
+  if (/(^|\s)(署名开)(\s|$)/.test(text)) result.disclosure = 'true';
+  if (/(^|\s)(署名关)(\s|$)/.test(text)) result.disclosure = 'false';
+  if (/(^|\s)(每次询问)(\s|$)/.test(text)) result.askDisclosure = 'true';
+  if (/(^|\s)(不再询问|记住设置)(\s|$)/.test(text)) result.askDisclosure = 'false';
+
   const topMatch = text.match(/前\s*(\d+)/);
   if (topMatch) result.top = topMatch[1];
 
-  const tokenMatch = text.match(/(?:代币|币种|token|symbol)\s*=\s*([^\s]+)/i);
-  if (tokenMatch) {
-    result.token = tokenMatch[1];
+  const tokenEqMatch = text.match(/(?:代币|币种|token|symbol)\s*=\s*([^\s]+)/i);
+  if (tokenEqMatch) {
+    result.token = tokenEqMatch[1];
     result.queryType = 'token';
+  }
+
+  const naturalTokenPatterns = [
+    /(?:查询|查|查一下|看看|看)\s*(?:代币|币种|token|symbol)?\s*([A-Za-z0-9._-]+)/i,
+    /([A-Za-z0-9._-]+)\s*(?:怎么样|信息|资料|行情)/i
+  ];
+
+  if (!result.token) {
+    for (const pattern of naturalTokenPatterns) {
+      const match = text.match(pattern);
+      if (match && match[1]) {
+        result.token = match[1];
+        result.queryType = 'token';
+        break;
+      }
+    }
   }
 
   const contractMatch = text.match(/(?:合约|contract)\s*=\s*([^\s]+)/i);
@@ -256,7 +283,9 @@ function normalizeData(raw, args = {}) {
       ...(mergedArgs.lang ? { lang: String(mergedArgs.lang).trim().toLowerCase() } : {}),
       ...(mergedArgs.top !== undefined ? { topN: normalizeTop(mergedArgs.top, validated.preferences?.topN || 3) } : {}),
       ...(mergedArgs.wallet !== undefined ? { wallet: normalizeBoolean(mergedArgs.wallet, validated.preferences?.wallet !== false) } : {}),
-      ...(mergedArgs.preview !== undefined ? { preview: normalizeBoolean(mergedArgs.preview, validated.preferences?.preview !== false) } : {})
+      ...(mergedArgs.preview !== undefined ? { preview: normalizeBoolean(mergedArgs.preview, validated.preferences?.preview !== false) } : {}),
+      ...(mergedArgs.disclosure !== undefined ? { squareDisclosureEnabled: normalizeBoolean(mergedArgs.disclosure, validated.preferences?.squareDisclosureEnabled === true) } : {}),
+      ...(mergedArgs.askDisclosure !== undefined ? { squareDisclosureAskEveryTime: normalizeBoolean(mergedArgs.askDisclosure, validated.preferences?.squareDisclosureAskEveryTime !== false) } : {})
     }
   };
 
