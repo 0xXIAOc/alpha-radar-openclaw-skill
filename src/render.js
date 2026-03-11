@@ -82,6 +82,8 @@ function preferenceSummary(preferences = {}) {
   if (preferences.lang) parts.push(`lang=${preferences.lang}`);
   if (typeof preferences.wallet === 'boolean') parts.push(`wallet=${preferences.wallet ? 'on' : 'off'}`);
   if (typeof preferences.preview === 'boolean') parts.push(`preview=${preferences.preview ? 'on' : 'off'}`);
+  if (typeof preferences.squareDisclosureEnabled === 'boolean') parts.push(`署名=${preferences.squareDisclosureEnabled ? '开' : '关'}`);
+  if (typeof preferences.squareDisclosureAskEveryTime === 'boolean') parts.push(`每次询问=${preferences.squareDisclosureAskEveryTime ? '是' : '否'}`);
   return parts.join(' | ');
 }
 
@@ -109,6 +111,43 @@ function shouldShowFailureDetails(data, mode) {
   return false;
 }
 
+function formatLeaderboardItem(item, defaultLabel) {
+  const symbol = item.symbol || item.name || '未知代币';
+  const chain = item.chain ? ` [${item.chain}]` : '';
+  const metricLabel = item.metricLabel || defaultLabel || '';
+  const metricValue = item.metricValue !== undefined && item.metricValue !== null && item.metricValue !== '' ? item.metricValue : '';
+  const note = item.note ? `｜${item.note}` : '';
+
+  if (metricLabel && metricValue) return `${symbol}${chain}｜${metricLabel} ${metricValue}${note}`;
+  if (metricValue) return `${symbol}${chain}｜${metricValue}${note}`;
+  return `${symbol}${chain}${note}`;
+}
+
+function renderMarketLeaderboardsTg(leaderboards = {}) {
+  const lines = [];
+
+  const groups = [
+    ['涨幅前三', ensureArray(leaderboards.gainersTop3), '涨幅'],
+    ['跌幅前三', ensureArray(leaderboards.losersTop3), '跌幅'],
+    ['交易所热度前三', ensureArray(leaderboards.exchangeHotTop3), '热度'],
+    ['钱包热度前三', ensureArray(leaderboards.walletHotTop3), '热度']
+  ];
+
+  let hasAny = false;
+  for (const [title, items, metricLabel] of groups) {
+    if (items.length > 0) {
+      hasAny = true;
+      lines.push(`${title}：`);
+      items.slice(0, 3).forEach((item, idx) => {
+        lines.push(`- ${idx + 1}. ${formatLeaderboardItem(item, metricLabel)}`);
+      });
+      lines.push('');
+    }
+  }
+
+  return hasAny ? lines : [];
+}
+
 function renderMarketTg(data) {
   const lines = [];
   const label = scopeLabel(data);
@@ -125,7 +164,12 @@ function renderMarketTg(data) {
     lines.push(`倾向：${data.marketTheme.stance}`);
   }
 
-  lines.push('');
+  const leaderboardLines = renderMarketLeaderboardsTg(data.leaderboards || {});
+  if (leaderboardLines.length > 0) {
+    lines.push('');
+    lines.push(...leaderboardLines);
+  }
+
   lines.push('Top：');
   if (topItems.length === 0) {
     lines.push('- 暂无明确入选标的');
@@ -212,6 +256,35 @@ function renderTokenTg(data) {
   return `${lines.join('\n').trim()}\n`;
 }
 
+function renderMarketSnapshotReport(leaderboards = {}) {
+  const lines = [];
+  const groups = [
+    ['涨幅前三', ensureArray(leaderboards.gainersTop3), '涨幅'],
+    ['跌幅前三', ensureArray(leaderboards.losersTop3), '跌幅'],
+    ['交易所热度前三', ensureArray(leaderboards.exchangeHotTop3), '热度'],
+    ['钱包热度前三', ensureArray(leaderboards.walletHotTop3), '热度']
+  ];
+
+  let hasAny = false;
+  for (const [title, items, metricLabel] of groups) {
+    if (items.length > 0) {
+      hasAny = true;
+      lines.push(`### ${title}`);
+      items.slice(0, 3).forEach((item, idx) => {
+        lines.push(`${idx + 1}. ${formatLeaderboardItem(item, metricLabel)}`);
+      });
+      lines.push('');
+    }
+  }
+
+  if (!hasAny) {
+    lines.push('暂无可用榜单快照。');
+    lines.push('');
+  }
+
+  return lines;
+}
+
 function renderReport(data) {
   if (data.queryType === 'token') {
     return renderTokenReport(data);
@@ -250,7 +323,10 @@ function renderReport(data) {
   if (data.marketTheme.stance) lines.push(`结论倾向：${data.marketTheme.stance}`);
   lines.push('');
 
-  lines.push('## 二、今日值得看名单');
+  lines.push('## 二、市场榜单快照');
+  lines.push(...renderMarketSnapshotReport(data.leaderboards || {}));
+
+  lines.push('## 三、今日值得看名单');
   if (sorted.length === 0) {
     lines.push('暂无符合条件的标的。');
   } else {
@@ -272,7 +348,7 @@ function renderReport(data) {
     }
   }
 
-  lines.push('## 三、今日风险警报');
+  lines.push('## 四、今日风险警报');
   const riskAlerts = ensureArray(data.riskAlerts);
   if (riskAlerts.length === 0) {
     lines.push('今日未发现需要单独高亮的风险样本。');
@@ -287,7 +363,7 @@ function renderReport(data) {
   }
   lines.push('');
 
-  lines.push('## 四、今日观察钱包 / 聪明钱附录');
+  lines.push('## 五、今日观察钱包 / 聪明钱附录');
   if (data.preferences && data.preferences.wallet === false) {
     lines.push('本轮按偏好设置关闭钱包附录。');
   } else {
@@ -297,7 +373,7 @@ function renderReport(data) {
   }
   lines.push('');
 
-  lines.push('## 五、今日结论');
+  lines.push('## 六、今日结论');
   const conclusion = ensureArray(data.conclusion);
   if (conclusion.length === 0) {
     lines.push('- 数据不足，暂不下结论。');
@@ -389,10 +465,32 @@ function renderSquare(data) {
   const topRisks = ensureArray(data.riskAlerts).slice(0, 2);
   const lines = [];
 
+  if (data.preferences?.squareDisclosureEnabled) {
+    lines.push('本文由OpenClaw发出');
+    lines.push('');
+  }
+
   lines.push(`Alpha Radar｜${label} ${stringValue(data.window, '24h')} 预览`);
   lines.push('');
   lines.push(`主线：${stringValue(data.marketTheme.summary, '今日主线暂不明确。')}`);
   if (data.marketTheme.stance) lines.push(`立场：${data.marketTheme.stance}`);
+
+  const groups = [
+    ['涨幅前三', ensureArray(data.leaderboards?.gainersTop3), '涨幅'],
+    ['跌幅前三', ensureArray(data.leaderboards?.losersTop3), '跌幅'],
+    ['交易所热度前三', ensureArray(data.leaderboards?.exchangeHotTop3), '热度'],
+    ['钱包热度前三', ensureArray(data.leaderboards?.walletHotTop3), '热度']
+  ];
+
+  groups.forEach(([title, items, metricLabel]) => {
+    if (items.length > 0) {
+      lines.push('');
+      lines.push(`${title}：`);
+      items.slice(0, 3).forEach((item, index) => {
+        lines.push(`${index + 1}. ${formatLeaderboardItem(item, metricLabel)}`);
+      });
+    }
+  });
 
   lines.push('');
   lines.push('值得看：');
@@ -436,6 +534,11 @@ function renderTokenSquare(data) {
   const action = token.action || token.verdict || '观察';
   const lines = [];
 
+  if (data.preferences?.squareDisclosureEnabled) {
+    lines.push('本文由OpenClaw发出');
+    lines.push('');
+  }
+
   lines.push(`Alpha Radar｜${symbol}${chain} ${stringValue(data.window, '24h')} 预览`);
   lines.push('');
   lines.push(`结论：${action}｜${score}`);
@@ -448,9 +551,7 @@ function renderTokenSquare(data) {
 }
 
 function renderTg(data) {
-  if (data.queryType === 'token') {
-    return renderTokenTg(data);
-  }
+  if (data.queryType === 'token') return renderTokenTg(data);
   return renderMarketTg(data);
 }
 
