@@ -1,12 +1,12 @@
 ---
 name: alpha
 description: Use this skill when the user asks to generate a Binance daily market report, Solana/BSC report, global report, Watchlist Delta Report, Alpha Radar report, token report, risk alert report, smart money appendix, or Binance Square preview. Trigger strongly on Chinese requests like “生成今日日报”, “按 Alpha Radar 模板生成日报”, “生成全网 watchlist”, “生成风险警报”, “生成 Binance Square 预览”, “只预览不发广场”, “给我一个短版”, “给我一个 TG 版”, “查询ROBO的信息”, “查询代币ROBO”, “查一下ROBO”, “ROBO怎么样”, “全网广场版前3”.
-metadata: {"version":"0.9.0","author":"0xXIAOc","openclaw":{"requires":{"bins":["node"]},"emoji":"📊","homepage":"https://github.com/0xXIAOc/alpha-radar-openclaw-skill"}}
+metadata: {"version":"0.9.1","author":"0xXIAOc","openclaw":{"requires":{"bins":["node"]},"emoji":"📊","homepage":"https://github.com/0xXIAOc/alpha-radar-openclaw-skill"}}
 homepage: https://github.com/0xXIAOc/alpha-radar-openclaw-skill
 user-invocable: true
 ---
 
-# Alpha Radar Report v5
+# Alpha Radar Report v5.1
 
 ## Default behavior
 
@@ -114,10 +114,12 @@ It has two major modes:
 Outputs:
 1. 今日市场主线
 2. 市场榜单快照
-3. 今日值得看名单
-4. 今日风险警报
-5. 今日观察钱包 / 聪明钱附录
-6. 今日结论
+3. 现货观察
+4. 合约温度
+5. Meme 雷达
+6. 风险警报
+7. 聪明钱附录
+8. 今日结论
 
 ### 2. Token mode
 Outputs:
@@ -175,6 +177,39 @@ Optional enrichment:
 5. `query-address-info`
 6. `spot`
 7. `square-post`
+
+## TG mode rules
+
+In `tg` mode, the output should feel like a trader dashboard, not a long research article.
+
+Prefer this structure:
+
+- 标题
+- 主线一句话
+- 涨幅前三
+- 跌幅前三
+- 交易所热度前三
+- 钱包热度前三
+- 现货观察
+- 合约温度
+- Meme 雷达
+- 风险
+- 结论
+
+Avoid long “解释型段落” unless the user explicitly asks for the long version.
+
+Do not append “如果你要，我下一条可以继续……” unless the user asks for follow-up options.
+
+## Market mode emphasis
+
+For `market` mode, prioritize:
+
+1. 现货
+2. meme
+3. smart money
+4. 合约温度（仅温度判断，不伪装成完整合约面板）
+
+If futures-specific data is unavailable, describe it as “合约温度 / 短线环境判断”, not as a complete futures monitor.
 
 ## Non-negotiable execution policy
 
@@ -257,6 +292,9 @@ For market mode include:
 - `upstreamCalls`
 - `marketTheme`
 - `leaderboards`
+- `spotFocus`
+- `futuresTemperature`
+- `memeRadar`
 - `watchlist`
 - `riskAlerts`
 - `walletAppendix`
