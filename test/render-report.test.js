@@ -7,13 +7,14 @@ const { validateReportData } = require('../src/schema');
 const { renderTg, renderReport, renderSquare } = require('../src/render');
 const { parseNaturalCommand, normalizeData } = require('../scripts/render-report');
 
-test('validateReportData accepts the v5 market payload shape', () => {
+test('validateReportData accepts the v5.1 market payload shape', () => {
   const result = validateReportData(sample);
   assert.equal(result.queryType, 'market');
   assert.equal(result.preferences.squareDisclosureEnabled, false);
+  assert.equal(result.preferences.squareDisclosureAskEveryTime, true);
 });
 
-test('parseNaturalCommand understands Chinese aliases and disclosure flags', () => {
+test('parseNaturalCommand understands disclosure flags', () => {
   const result = parseNaturalCommand('全网 广场版 前3 谨慎 钱包关 署名开 不再询问');
   assert.equal(result.scope, 'global');
   assert.equal(result.style, 'square');
@@ -35,20 +36,25 @@ test('normalizeData can switch to token mode from natural command', () => {
   assert.equal(result.tokenQuery.symbol, 'ROBO');
 });
 
-test('renderTg includes leaderboard snapshots in market mode', () => {
+test('renderTg includes leaderboards, spot focus, futures temperature, and meme radar', () => {
   const output = renderTg(validateReportData(sample));
   assert.match(output, /涨幅前三/);
   assert.match(output, /跌幅前三/);
   assert.match(output, /交易所热度前三/);
   assert.match(output, /钱包热度前三/);
+  assert.match(output, /现货观察/);
+  assert.match(output, /合约温度/);
+  assert.match(output, /Meme 雷达/);
 });
 
-test('renderReport includes 市场榜单快照 section', () => {
+test('renderReport includes trader-focused sections', () => {
   const output = renderReport(validateReportData(sample));
-  assert.match(output, /## 二、市场榜单快照/);
+  assert.match(output, /## 三、现货观察/);
+  assert.match(output, /## 四、合约温度/);
+  assert.match(output, /## 五、Meme 雷达/);
 });
 
-test('renderSquare supports disclosure line', () => {
+test('renderSquare supports disclosure line and leaderboards', () => {
   const output = renderSquare(
     validateReportData({
       ...sample,
@@ -61,6 +67,7 @@ test('renderSquare supports disclosure line', () => {
 
   assert.match(output, /本文由OpenClaw发出/);
   assert.match(output, /涨幅前三/);
+  assert.match(output, /交易所热度前三/);
 });
 
 test('render token square works', () => {
@@ -100,6 +107,9 @@ test('render token square works', () => {
       exchangeHotTop3: [],
       walletHotTop3: []
     },
+    spotFocus: { summary: '', top3: [] },
+    futuresTemperature: { summary: '', preferredChain: '', notes: [] },
+    memeRadar: { summary: '', top3: [] },
     watchlist: [
       {
         symbol: 'CAKE',
