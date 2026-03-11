@@ -1,13 +1,12 @@
 ---
-name: alpha-radar-report
-description: Use this skill when the user asks to generate a Binance daily market report, Solana/BSC report, global report, Watchlist Delta Report, Alpha Radar report, token report, risk alert report, smart money appendix, or Binance Square preview. Trigger strongly on requests like “生成今日日报”, “按 Alpha Radar 模板生成日报”, “生成全网 watchlist”, “生成风险警报”, “生成 Binance Square 预览”, “只预览不发广场”, “给我一个短版”, “给我一个 TG 版”, “查某个代币”.
-metadata: {"version":"0.8.0","author":"0xXIAOc","openclaw":{"requires":{"bins":["node"]},"emoji":"📊","homepage":"https://github.com/0xXIAOc/alpha-radar-openclaw-skill"}}
+name: alpha
+description: Use this skill when the user asks to generate a Binance daily market report, Solana/BSC report, global report, Watchlist Delta Report, Alpha Radar report, token report, risk alert report, smart money appendix, or Binance Square preview. Trigger strongly on Chinese requests like “生成今日日报”, “按 Alpha Radar 模板生成日报”, “生成全网 watchlist”, “生成风险警报”, “生成 Binance Square 预览”, “只预览不发广场”, “给我一个短版”, “给我一个 TG 版”, “查询ROBO的信息”, “查询代币ROBO”, “查一下ROBO”, “ROBO怎么样”, “全网广场版前3”.
+metadata: {"version":"0.9.0","author":"0xXIAOc","openclaw":{"requires":{"bins":["node"]},"emoji":"📊","homepage":"https://github.com/0xXIAOc/alpha-radar-openclaw-skill"}}
 homepage: https://github.com/0xXIAOc/alpha-radar-openclaw-skill
 user-invocable: true
-disable-model-invocation: true
 ---
 
-# Alpha Radar Report v4
+# Alpha Radar Report v5
 
 ## Default behavior
 
@@ -50,6 +49,12 @@ If the user provides any of the following, switch to `token` mode:
 - `symbol=...`
 - `合约=...`
 - `contract=...`
+- 自然中文句式，例如：
+  - `查询ROBO的信息`
+  - `查询代币ROBO`
+  - `查一下ROBO`
+  - `看看ROBO`
+  - `ROBO怎么样`
 
 ## Mode definitions
 
@@ -87,6 +92,12 @@ Interpret these naturally:
 - `前3` = `top=3`
 - `前5` = `top=5`
 
+### 广场署名
+- `署名开` = `squareDisclosureEnabled=true`
+- `署名关` = `squareDisclosureEnabled=false`
+- `每次询问` = `squareDisclosureAskEveryTime=true`
+- `不再询问` / `记住设置` = `squareDisclosureAskEveryTime=false`
+
 ### 指定代币
 - `代币=CAKE`
 - `币种=PEPE`
@@ -102,10 +113,11 @@ It has two major modes:
 ### 1. Market mode
 Outputs:
 1. 今日市场主线
-2. 今日值得看名单
-3. 今日风险警报
-4. 今日观察钱包 / 聪明钱附录
-5. 今日结论
+2. 市场榜单快照
+3. 今日值得看名单
+4. 今日风险警报
+5. 今日观察钱包 / 聪明钱附录
+6. 今日结论
 
 ### 2. Token mode
 Outputs:
@@ -116,13 +128,39 @@ Outputs:
 
 This skill should prioritize real upstream Binance skill calls in the current turn before writing any report.
 
+## Slash command behavior
+
+The short slash command for this skill should be:
+
+- `/alpha`
+
+Examples:
+- `/alpha`
+- `/alpha 全网`
+- `/alpha 代币=ROBO`
+- `/alpha 广场版 前3`
+- `/alpha 全网 广场版 署名关 不再询问`
+
+## Natural chat behavior
+
+This skill should also be considered during normal Chinese chat requests such as:
+
+- `查询ROBO的信息`
+- `查询代币ROBO`
+- `查一下ROBO`
+- `ROBO怎么样`
+- `全网广场版前3`
+- `BSC 谨慎 钱包关`
+
+If the user provides enough information in a normal message, do not force them to restate it as a slash command.
+
 ## Strong invocation rule
 
-When the user invokes this skill directly via slash command or `/skill alpha_radar_report`, treat it as a hard request to run the Alpha Radar workflow now.
+When the user invokes this skill directly via slash command or `/skill alpha`, treat it as a hard request to run the Alpha Radar workflow now.
 
 Do not respond as generic chat first.
 Do not ask a follow-up if the command already contains enough information.
-If the command is bare `/alpha_radar_report`, run the default workflow immediately.
+If the command is bare `/alpha`, run the default workflow immediately.
 
 ## Required upstream skills
 
@@ -160,6 +198,17 @@ If fallback is necessary, use this wording style:
 
 Never use vague wording like “数据未接入” if the real issue is “this turn did not successfully call the upstream skill”.
 
+## Square disclosure rule
+
+When `mode=square` and the user asks to generate or publish a Square draft:
+
+- If `squareDisclosureAskEveryTime=true` and the user did not explicitly specify `署名开` or `署名关`, ask once:
+  - “本次广场文案开头要不要加：本文由OpenClaw发出？”
+- If `squareDisclosureAskEveryTime=false`, follow the stored/default preference directly.
+- If `squareDisclosureEnabled=true`, prepend:
+  - `本文由OpenClaw发出`
+- If `squareDisclosureEnabled=false`, do not prepend it.
+
 ## Standard workflow
 
 ### Step 1: Read request scope
@@ -175,6 +224,8 @@ Infer or read:
   - `lang`
   - `wallet`
   - `preview`
+  - `squareDisclosureEnabled`
+  - `squareDisclosureAskEveryTime`
 - token fields if present:
   - `token`
   - `contract`
@@ -205,6 +256,7 @@ For market mode include:
 - `generatedAt`
 - `upstreamCalls`
 - `marketTheme`
+- `leaderboards`
 - `watchlist`
 - `riskAlerts`
 - `walletAppendix`
@@ -262,6 +314,7 @@ In `square` mode:
 - Prefer a directly postable format:
   - 标题
   - 主线 / 代币结论
+  - 涨幅前三 / 跌幅前三 / 热度前三（如有）
   - Top 3 或代币看点
   - 风险
   - 结论
