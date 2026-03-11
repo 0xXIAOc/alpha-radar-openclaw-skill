@@ -3,7 +3,7 @@
   "queryType": "market",
   "tokenQuery": {},
   "mode": "tg",
-  "chainScope": "auto",
+  "chainScope": "global",
   "selectedChains": ["Solana", "BSC"],
   "previewOnly": true,
   "preferences": {
@@ -16,122 +16,70 @@
     "squareDisclosureEnabled": false,
     "squareDisclosureAskEveryTime": true
   },
-  "chain": "Auto",
+  "chain": "Global",
   "window": "24h",
-  "generatedAt": "2026-03-11T07:00:00Z",
+  "generatedAt": "2026-03-11T20:00:00Z",
   "upstreamCalls": [
-    {
-      "skill": "crypto-market-rank",
-      "status": "ok"
-    },
-    {
-      "skill": "query-token-info",
-      "status": "ok"
-    },
-    {
-      "skill": "trading-signal",
-      "status": "partial",
-      "message": "部分信号为 timeout"
-    },
-    {
-      "skill": "query-token-audit",
-      "status": "ok"
-    },
-    {
-      "skill": "query-address-info",
-      "status": "failed",
-      "message": "本轮未拉取钱包明细"
-    }
+    { "skill": "crypto-market-rank", "status": "ok" },
+    { "skill": "query-token-info", "status": "ok" },
+    { "skill": "trading-signal", "status": "partial", "message": "部分信号为 timeout" },
+    { "skill": "query-token-audit", "status": "ok" },
+    { "skill": "query-address-info", "status": "failed", "message": "本轮未拉取钱包明细" }
   ],
   "marketTheme": {
-    "summary": "Solana 负责制造注意力，BSC 提供更可研究的交易结构；全市场更适合分链判断，不适合用一套逻辑追全部。",
+    "summary": "今天全网是情绪驱动 + 双链分化。BSC 更适合看结构，Solana 更适合看弹性。",
     "signals": [
-      "Solana 热搜票弹性更强，但回撤风险更高",
-      "BSC 的 smart money 与流动性结构更适合做确认",
-      "审计低风险不代表位置安全，交易风险仍需单独判断"
+      "BSC 更适合成交、smart money、审计风控交叉验证",
+      "Solana 热点弹性更强，但薄流动性和集中度风险更大",
+      "今天不是追最热，而是追热度、成交、信号同时对齐"
     ],
     "stance": "观察确认"
   },
   "leaderboards": {
     "gainersTop3": [
-      {
-        "symbol": "Distorted",
-        "chain": "Solana",
-        "metricLabel": "涨幅",
-        "metricValue": "+1238%"
-      },
-      {
-        "symbol": "SOS",
-        "chain": "Solana",
-        "metricLabel": "涨幅",
-        "metricValue": "+312%"
-      },
-      {
-        "symbol": "ROBO",
-        "chain": "BSC",
-        "metricLabel": "涨幅",
-        "metricValue": "+188%"
-      }
+      { "symbol": "Distorted", "chain": "Solana", "metricLabel": "涨幅", "metricValue": "+1238%" },
+      { "symbol": "SOS", "chain": "Solana", "metricLabel": "涨幅", "metricValue": "+312%" },
+      { "symbol": "ROBO", "chain": "BSC", "metricLabel": "涨幅", "metricValue": "+188%" }
     ],
     "losersTop3": [
-      {
-        "symbol": "JUP",
-        "chain": "Solana",
-        "metricLabel": "跌幅",
-        "metricValue": "-4.18%"
-      },
-      {
-        "symbol": "OLDX",
-        "chain": "BSC",
-        "metricLabel": "跌幅",
-        "metricValue": "-8.41%"
-      },
-      {
-        "symbol": "WEAK",
-        "chain": "Solana",
-        "metricLabel": "跌幅",
-        "metricValue": "-11.52%"
-      }
+      { "symbol": "JUP", "chain": "Solana", "metricLabel": "跌幅", "metricValue": "-4.18%" },
+      { "symbol": "OLDX", "chain": "BSC", "metricLabel": "跌幅", "metricValue": "-8.41%" },
+      { "symbol": "WEAK", "chain": "Solana", "metricLabel": "跌幅", "metricValue": "-11.52%" }
     ],
     "exchangeHotTop3": [
-      {
-        "symbol": "PUMP",
-        "chain": "Solana",
-        "metricLabel": "热度",
-        "metricValue": "91"
-      },
-      {
-        "symbol": "TRUMP",
-        "chain": "Solana",
-        "metricLabel": "热度",
-        "metricValue": "88"
-      },
-      {
-        "symbol": "CAKE",
-        "chain": "BSC",
-        "metricLabel": "热度",
-        "metricValue": "84"
-      }
+      { "symbol": "PUMP", "chain": "Solana", "metricLabel": "热度", "metricValue": "91" },
+      { "symbol": "TRUMP", "chain": "Solana", "metricLabel": "热度", "metricValue": "88" },
+      { "symbol": "CAKE", "chain": "BSC", "metricLabel": "热度", "metricValue": "84" }
     ],
     "walletHotTop3": [
-      {
-        "symbol": "CAKE",
-        "chain": "BSC",
-        "metricLabel": "热度",
-        "metricValue": "smart money active"
-      },
-      {
-        "symbol": "Distorted",
-        "chain": "Solana",
-        "metricLabel": "热度",
-        "metricValue": "wallet attention"
-      },
-      {
-        "symbol": "PUMP",
-        "chain": "Solana",
-        "metricLabel": "热度",
-        "metricValue": "whale watch"
-      }
+      { "symbol": "CAKE", "chain": "BSC", "metricLabel": "热度", "metricValue": "smart money active" },
+      { "symbol": "Distorted", "chain": "Solana", "metricLabel": "热度", "metricValue": "wallet attention" },
+      { "symbol": "PUMP", "chain": "Solana", "metricLabel": "热度", "metricValue": "whale watch" }
+    ]
+  },
+  "spotFocus": {
+    "summary": "现货更适合优先盯成交、热度和流动性同时在线的币。",
+    "top3": [
+      { "symbol": "quq", "chain": "BSC", "reason": "成交最强，情绪中心之一" },
+      { "symbol": "CAKE", "chain": "BSC", "reason": "更符合结构型现货观察逻辑" },
+      { "symbol": "PUMP", "chain": "Solana", "reason": "更像主流流动性锚，适合看风险偏好" }
+    ]
+  },
+  "futuresTemperature": {
+    "summary": "今天合约更适合当短线环境温度计，不适合强行给单边确定性结论。",
+    "preferredChain": "BSC",
+    "notes": [
+      "BSC 更适合看结构与承接",
+      "Solana 更适合看高波动弹性",
+      "旧 signal 和高 exitRate 更适合回避"
+    ]
+  },
+  "memeRadar": {
+    "summary": "Meme 仍是今天流量和弹性的核心来源，但高热不等于高确定性。",
+    "top3": [
+      { "symbol": "龙虾", "chain": "BSC", "reason": "高弹性且有链上信号确认" },
+      { "symbol": "Distorted", "chain": "Solana", "reason": "热度、搜索、成交同时爆发" },
+      { "symbol": "PLAY", "chain": "BSC", "reason": "情绪足，承接也明显" }
     ]
   },
   "watchlist": [
@@ -235,8 +183,8 @@
     ]
   },
   "conclusion": [
-    "今天全市场更适合按链做判断：Solana 看热度与弹性，BSC 看结构与确认。",
-    "真正值得看的不是最热的，而是热度、成交、流动性与风控能否一起对齐。",
+    "今天全市场更适合按链做判断：BSC 看结构，Solana 看弹性。",
+    "优先关注现货、meme 和 smart money 三条线共同对齐的币。",
     "旧信号、薄流动性和高集中度，仍是今天最该回避的三类风险。"
   ]
 }
