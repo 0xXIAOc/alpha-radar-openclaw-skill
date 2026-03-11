@@ -1,20 +1,21 @@
 {
   "name": "alpha-radar-openclaw-skill",
-  "version": "0.4.0",
+  "version": "0.7.0",
   "private": true,
-  "description": "OpenClaw custom skill that renders Binance research data into a stable report or Binance Square draft.",
+  "description": "OpenClaw custom skill that renders Binance research data into TG previews, full reports, or Binance Square drafts.",
   "license": "MIT",
   "type": "commonjs",
   "bin": {
     "alpha-radar-render": "scripts/render-report.js"
   },
   "scripts": {
+    "tg": "node scripts/render-report.js --input examples/sample-data.json --style tg --output examples/sample-tg.txt",
     "report": "node scripts/render-report.js --input examples/sample-data.json --style report --output examples/sample-report.md",
-    "report:stdout": "node scripts/render-report.js --input examples/sample-data.json --style report",
     "square": "node scripts/render-report.js --input examples/sample-data.json --style square --output examples/sample-square.txt",
-    "square:stdout": "node scripts/render-report.js --input examples/sample-data.json --style square",
+    "global:tg": "node scripts/render-report.js --input examples/sample-data.json --style tg --scope global --output examples/sample-global-tg.txt",
+    "global:square": "node scripts/render-report.js --input examples/sample-data.json --style square --scope global --output examples/sample-global-square.txt",
     "test": "node --test",
-    "smoke": "node scripts/render-report.js --input examples/sample-data.json --style report --output .tmp-check-report.md && node scripts/render-report.js --input examples/sample-data.json --style square --output .tmp-check-square.txt && node -e \"require('fs').rmSync('.tmp-check-report.md',{force:true});require('fs').rmSync('.tmp-check-square.txt',{force:true});\"",
+    "smoke": "node scripts/render-report.js --input examples/sample-data.json --style tg --output .tmp-check-tg.txt && node scripts/render-report.js --input examples/sample-data.json --style report --output .tmp-check-report.md && node scripts/render-report.js --input examples/sample-data.json --style square --output .tmp-check-square.txt && node -e \"require('fs').rmSync('.tmp-check-tg.txt',{force:true});require('fs').rmSync('.tmp-check-report.md',{force:true});require('fs').rmSync('.tmp-check-square.txt',{force:true});\"",
     "check": "npm run test && npm run smoke"
   },
   "engines": {
