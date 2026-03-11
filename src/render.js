@@ -93,10 +93,26 @@ function severityLabel(value) {
   return '中';
 }
 
+function preferenceSummary(preferences = {}) {
+  const parts = [];
+  if (preferences.profile) parts.push(`profile=${preferences.profile}`);
+  if (preferences.risk) parts.push(`risk=${preferences.risk}`);
+  if (typeof preferences.topN === 'number') parts.push(`top=${preferences.topN}`);
+  if (preferences.lang) parts.push(`lang=${preferences.lang}`);
+  if (typeof preferences.wallet === 'boolean') parts.push(`wallet=${preferences.wallet ? 'on' : 'off'}`);
+  if (typeof preferences.preview === 'boolean') parts.push(`preview=${preferences.preview ? 'on' : 'off'}`);
+  return parts.join(' | ');
+}
+
+function getTopN(data, fallback) {
+  const value = data.preferences && typeof data.preferences.topN === 'number' ? data.preferences.topN : fallback;
+  return Math.max(1, Math.min(value, 10));
+}
+
 function renderTg(data) {
   const lines = [];
   const label = scopeLabel(data);
-  const topItems = sortWatchlist(data.watchlist).slice(0, 3);
+  const topItems = sortWatchlist(data.watchlist).slice(0, getTopN(data, 3));
   const topRisks = ensureArray(data.riskAlerts).slice(0, 2);
   const failedCalls = failedUpstreamCalls(data.upstreamCalls);
 
@@ -107,9 +123,7 @@ function renderTg(data) {
   }
 
   lines.push('模式：TG 简版预览');
-  if (data.previewOnly !== false) {
-    lines.push('发布：仅预览，不发广场');
-  }
+  lines.push(`偏好：${preferenceSummary(data.preferences || {})}`);
 
   lines.push('');
   lines.push(formatUpstreamSummary(data.upstreamCalls));
@@ -185,6 +199,7 @@ function renderReport(data) {
 
   lines.push(`模式：${data.mode || 'report'}`);
   lines.push(`范围：${label}`);
+  lines.push(`偏好：${preferenceSummary(data.preferences || {})}`);
   lines.push(`发布：${data.previewOnly !== false ? '仅预览，不发广场' : '可发布'}`);
   lines.push('');
 
@@ -212,7 +227,7 @@ function renderReport(data) {
   if (sorted.length === 0) {
     lines.push('暂无符合条件的标的。');
   } else {
-    for (const item of sorted.slice(0, 5)) {
+    for (const item of sorted.slice(0, getTopN(data, 5))) {
       const symbol = item.symbol || item.name || '未知代币';
       const chain = item.chain ? ` [${item.chain}]` : '';
       lines.push(`### ${symbol}${chain}`);
@@ -254,10 +269,14 @@ function renderReport(data) {
   lines.push('');
 
   lines.push('## 四、今日观察钱包 / 聪明钱附录');
-  lines.push(stringValue(data.walletAppendix.summary, '暂无附录数据。'));
-  const notes = ensureArray(data.walletAppendix.notes);
-  for (const note of notes) {
-    lines.push(`- ${note}`);
+  if (data.preferences && data.preferences.wallet === false) {
+    lines.push('本轮按偏好设置关闭钱包附录。');
+  } else {
+    lines.push(stringValue(data.walletAppendix.summary, '暂无附录数据。'));
+    const notes = ensureArray(data.walletAppendix.notes);
+    for (const note of notes) {
+      lines.push(`- ${note}`);
+    }
   }
   lines.push('');
 
@@ -278,29 +297,30 @@ function renderReport(data) {
 
 function renderSquare(data) {
   const label = scopeLabel(data);
-  const topItems = sortWatchlist(data.watchlist).slice(0, 3);
+  const topItems = sortWatchlist(data.watchlist).slice(0, Math.min(getTopN(data, 3), 3));
   const topRisks = ensureArray(data.riskAlerts).slice(0, 2);
   const lines = [];
 
-  lines.push(`【Alpha Radar | ${label} ${stringValue(data.window, '24h')}】`);
-  lines.push(stringValue(data.marketTheme.summary, '今日主线暂不明确。'));
-
+  lines.push(`Alpha Radar｜${label} ${stringValue(data.window, '24h')} 预览`);
+  lines.push('');
+  lines.push(`主线：${stringValue(data.marketTheme.summary, '今日主线暂不明确。')}`);
   if (data.marketTheme.stance) {
-    lines.push(`倾向：${data.marketTheme.stance}`);
+    lines.push(`立场：${data.marketTheme.stance}`);
   }
 
   lines.push('');
-  lines.push('Top：');
+  lines.push('值得看：');
   if (topItems.length === 0) {
-    lines.push('- 今日暂无明确入选标的');
+    lines.push('1. 今日暂无明确入选标的');
   } else {
-    for (const item of topItems) {
+    topItems.forEach((item, index) => {
       const symbol = item.symbol || item.name || '未知代币';
-      const chain = item.chain ? `[${item.chain}] ` : '';
+      const chain = item.chain ? ` [${item.chain}]` : '';
       const score = typeof item.score === 'number' ? `${item.score}/100` : '未评分';
       const action = item.action || item.verdict || '观察';
-      lines.push(`- ${chain}${symbol} | ${action} | ${score}：${stringValue(item.reason, '数据不足，暂不下结论。')}`);
-    }
+      lines.push(`${index + 1}. ${symbol}${chain}｜${action}｜${score}`);
+      lines.push(`   ${stringValue(item.reason, '数据不足，暂不下结论。')}`);
+    });
   }
 
   lines.push('');
@@ -310,14 +330,14 @@ function renderSquare(data) {
   } else {
     for (const risk of topRisks) {
       const symbol = risk.symbol || risk.name || '未知代币';
-      const chain = risk.chain ? `[${risk.chain}] ` : '';
-      lines.push(`- ${chain}${symbol}：${stringValue(risk.reason, '存在风险')}`);
+      const chain = risk.chain ? ` [${risk.chain}]` : '';
+      lines.push(`- ${symbol}${chain}：${stringValue(risk.reason, '存在风险')}`);
     }
   }
 
   lines.push('');
   lines.push('结论：优先看热度、成交、流动性与风控能否持续共振，而不是只看单日涨幅。');
-  lines.push('DYOR。以上仅为数据整理与研究辅助，不构成任何建议。');
+  lines.push('DYOR。以上仅为研究整理，不构成任何建议。');
 
   return `${lines.join('\n').trim()}\n`;
 }
