@@ -40,6 +40,14 @@ function parseArgs(argv) {
       args.lang = argv[++i];
     } else if (token === '--wallet') {
       args.wallet = argv[++i];
+    } else if (token === '--token' || token === '--symbol') {
+      args.token = argv[++i];
+    } else if (token === '--contract') {
+      args.contract = argv[++i];
+    } else if (token === '--query-type') {
+      args.queryType = argv[++i];
+    } else if (token === '--command') {
+      args.command = argv[++i];
     } else if (token === '--help' || token === '-h') {
       args.help = true;
     } else {
@@ -71,7 +79,10 @@ function usage() {
     '  --risk <value>          low | balanced | high',
     '  --top <n>               shortlist size',
     '  --lang <value>          zh | en',
-    '  --wallet <bool>         true | false'
+    '  --wallet <bool>         true | false',
+    '  --token <value>         token symbol/name',
+    '  --contract <value>      contract address',
+    '  --command "<raw>"       parse Chinese aliases from raw command'
   ].join('\n');
 }
 
@@ -110,7 +121,10 @@ function normalizeScope(value) {
   if (!value) return undefined;
   const normalized = String(value).trim().toLowerCase();
 
-  if (normalized === 'sol') return 'solana';
+  if (normalized === '全网' || normalized === 'global') return 'global';
+  if (normalized === '自动' || normalized === 'auto') return 'auto';
+  if (normalized === 'sol' || normalized === 'solana' || normalized === '索拉纳') return 'solana';
+  if (normalized === 'bsc') return 'bsc';
   if (normalized === 'ethereum') return 'ethereum';
   if (normalized === 'eth') return 'eth';
 
@@ -125,9 +139,9 @@ function normalizeStyle(value) {
   if (!value) return 'tg';
   const normalized = String(value).trim().toLowerCase();
 
-  if (normalized === 'telegram') return 'tg';
-  if (normalized === 'full') return 'report';
-  if (['tg', 'report', 'square'].includes(normalized)) return normalized;
+  if (['telegram', 'tg', '预览', '短版', 'tg版'].includes(normalized)) return 'tg';
+  if (['full', 'report', '完整版', '长版'].includes(normalized)) return 'report';
+  if (['square', '广场版', 'square版'].includes(normalized)) return 'square';
 
   throw new Error(`Invalid style: ${value}. Expected "tg", "report", or "square".`);
 }
@@ -135,8 +149,8 @@ function normalizeStyle(value) {
 function normalizeBoolean(value, fallback) {
   if (value === undefined || value === null || value === '') return fallback;
   const normalized = String(value).trim().toLowerCase();
-  if (['true', '1', 'yes', 'y', 'on'].includes(normalized)) return true;
-  if (['false', '0', 'no', 'n', 'off'].includes(normalized)) return false;
+  if (['true', '1', 'yes', 'y', 'on', '开', '是'].includes(normalized)) return true;
+  if (['false', '0', 'no', 'n', 'off', '关', '否'].includes(normalized)) return false;
   return fallback;
 }
 
@@ -147,29 +161,102 @@ function normalizeTop(value, fallback = 3) {
   return Math.max(1, Math.min(Math.round(parsed), 10));
 }
 
+function applyAliasObject(target, source) {
+  Object.entries(source).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== '') {
+      target[key] = value;
+    }
+  });
+  return target;
+}
+
+function parseNaturalCommand(raw) {
+  const result = {};
+  if (!raw || !String(raw).trim()) return result;
+
+  const text = String(raw).trim();
+
+  if (/(^|\s)(全网)(\s|$)/.test(text)) result.scope = 'global';
+  if (/(^|\s)(自动)(\s|$)/.test(text)) result.scope = 'auto';
+  if (/(^|\s)(solana|索拉纳)(\s|$)/i.test(text)) result.scope = 'solana';
+  if (/(^|\s)(bsc)(\s|$)/i.test(text)) result.scope = 'bsc';
+
+  if (/(^|\s)(预览|短版|TG版)(\s|$)/.test(text)) result.style = 'tg';
+  if (/(^|\s)(完整版|长版)(\s|$)/.test(text)) result.style = 'report';
+  if (/(^|\s)(广场版|Square版)(\s|$)/i.test(text)) result.style = 'square';
+
+  if (/(^|\s)(谨慎)(\s|$)/.test(text)) result.profile = 'cautious';
+  if (/(^|\s)(均衡)(\s|$)/.test(text)) result.profile = 'balanced';
+  if (/(^|\s)(激进)(\s|$)/.test(text)) result.profile = 'aggressive';
+
+  if (/(^|\s)(钱包关|不看钱包)(\s|$)/.test(text)) result.wallet = 'false';
+  if (/(^|\s)(钱包开|看钱包)(\s|$)/.test(text)) result.wallet = 'true';
+
+  const topMatch = text.match(/前\s*(\d+)/);
+  if (topMatch) result.top = topMatch[1];
+
+  const tokenMatch = text.match(/(?:代币|币种|token|symbol)\s*=\s*([^\s]+)/i);
+  if (tokenMatch) {
+    result.token = tokenMatch[1];
+    result.queryType = 'token';
+  }
+
+  const contractMatch = text.match(/(?:合约|contract)\s*=\s*([^\s]+)/i);
+  if (contractMatch) {
+    result.contract = contractMatch[1];
+    result.queryType = 'token';
+  }
+
+  const chainMatch = text.match(/(?:链|chain)\s*=\s*([^\s]+)/i);
+  if (chainMatch) {
+    result.chain = chainMatch[1];
+    const scope = normalizeScope(chainMatch[1]);
+    if (scope) result.scope = scope;
+  }
+
+  return result;
+}
+
 function normalizeData(raw, args = {}) {
   const validated = validateReportData(raw);
+  const aliasArgs = parseNaturalCommand(args.command || '');
+
+  const mergedArgs = applyAliasObject({ ...args }, aliasArgs);
+
+  const mode = normalizeStyle(mergedArgs.style || validated.mode || 'tg');
+  const scope =
+    normalizeScope(mergedArgs.scope) ||
+    validated.chainScope ||
+    (validated.chain && validated.chain !== 'Auto' ? normalizeScope(validated.chain) : 'auto') ||
+    'auto';
+
+  const token = mergedArgs.token || validated.tokenQuery?.token || validated.tokenQuery?.symbol;
+  const contract = mergedArgs.contract || validated.tokenQuery?.contractAddress;
+  const queryType = mergedArgs.queryType || (token || contract ? 'token' : validated.queryType || 'market');
 
   const merged = {
     ...validated,
-    mode: normalizeStyle(args.style || validated.mode || 'tg'),
-    chainScope:
-      normalizeScope(args.scope) ||
-      validated.chainScope ||
-      (validated.chain && validated.chain !== 'Auto' ? normalizeScope(validated.chain) : 'auto') ||
-      'auto',
-    title: args.title || validated.title || '',
-    chain: args.chain || validated.chain || 'Auto',
-    window: args.window || validated.window || '24h',
-    previewOnly: normalizeBoolean(args.preview, validated.previewOnly !== false),
+    queryType,
+    mode,
+    chainScope: scope,
+    title: mergedArgs.title || validated.title || '',
+    chain: mergedArgs.chain || validated.chain || 'Auto',
+    window: mergedArgs.window || validated.window || '24h',
+    previewOnly: normalizeBoolean(mergedArgs.preview, validated.previewOnly !== false),
+    tokenQuery: {
+      ...(validated.tokenQuery || {}),
+      ...(token ? { token, symbol: token } : {}),
+      ...(contract ? { contractAddress: contract } : {}),
+      ...(mergedArgs.chain ? { chain: mergedArgs.chain } : {})
+    },
     preferences: {
       ...(validated.preferences || {}),
-      ...(args.profile ? { profile: String(args.profile).trim().toLowerCase() } : {}),
-      ...(args.risk ? { risk: String(args.risk).trim().toLowerCase() } : {}),
-      ...(args.lang ? { lang: String(args.lang).trim().toLowerCase() } : {}),
-      ...(args.top !== undefined ? { topN: normalizeTop(args.top, validated.preferences?.topN || 3) } : {}),
-      ...(args.wallet !== undefined ? { wallet: normalizeBoolean(args.wallet, validated.preferences?.wallet !== false) } : {}),
-      ...(args.preview !== undefined ? { preview: normalizeBoolean(args.preview, validated.preferences?.preview !== false) } : {})
+      ...(mergedArgs.profile ? { profile: String(mergedArgs.profile).trim().toLowerCase() } : {}),
+      ...(mergedArgs.risk ? { risk: String(mergedArgs.risk).trim().toLowerCase() } : {}),
+      ...(mergedArgs.lang ? { lang: String(mergedArgs.lang).trim().toLowerCase() } : {}),
+      ...(mergedArgs.top !== undefined ? { topN: normalizeTop(mergedArgs.top, validated.preferences?.topN || 3) } : {}),
+      ...(mergedArgs.wallet !== undefined ? { wallet: normalizeBoolean(mergedArgs.wallet, validated.preferences?.wallet !== false) } : {}),
+      ...(mergedArgs.preview !== undefined ? { preview: normalizeBoolean(mergedArgs.preview, validated.preferences?.preview !== false) } : {})
     }
   };
 
@@ -220,6 +307,7 @@ if (require.main === module) {
 
 module.exports = {
   parseArgs,
+  parseNaturalCommand,
   normalizeData,
   normalizeScope,
   normalizeStyle,
