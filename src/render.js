@@ -58,25 +58,6 @@ function formatMetrics(metrics = {}) {
   return parts.length > 0 ? parts.join('；') : '关键数据未提供';
 }
 
-function formatUpstreamSummary(upstreamCalls = []) {
-  const calls = ensureArray(upstreamCalls);
-  if (calls.length === 0) return '上游调用：未记录';
-
-  const parts = calls.map((call) => {
-    const icon =
-      call.status === 'ok'
-        ? '✓'
-        : call.status === 'partial'
-        ? '◐'
-        : call.status === 'failed'
-        ? '✗'
-        : '–';
-    return `${call.skill}${icon}`;
-  });
-
-  return `上游调用：${parts.join(' | ')}`;
-}
-
 function failedUpstreamCalls(upstreamCalls = []) {
   return ensureArray(upstreamCalls).filter((call) => call.status === 'failed');
 }
@@ -109,27 +90,34 @@ function getTopN(data, fallback) {
   return Math.max(1, Math.min(value, 10));
 }
 
-function renderTg(data) {
+function getPrimaryToken(data) {
+  const sorted = sortWatchlist(data.watchlist);
+  if (sorted.length > 0) return sorted[0];
+
+  return {
+    symbol: data.tokenQuery?.symbol || data.tokenQuery?.token || '未知代币',
+    chain: data.tokenQuery?.chain || data.chain || '',
+    contractAddress: data.tokenQuery?.contractAddress || ''
+  };
+}
+
+function shouldShowFailureDetails(data, mode) {
+  const failed = failedUpstreamCalls(data.upstreamCalls);
+  if (failed.length === 0) return false;
+  if (mode === 'report') return true;
+  if (ensureArray(data.watchlist).length === 0) return true;
+  return false;
+}
+
+function renderMarketTg(data) {
   const lines = [];
   const label = scopeLabel(data);
   const topItems = sortWatchlist(data.watchlist).slice(0, getTopN(data, 3));
   const topRisks = ensureArray(data.riskAlerts).slice(0, 2);
-  const failedCalls = failedUpstreamCalls(data.upstreamCalls);
 
   lines.push(`Alpha Radar | ${label} ${stringValue(data.window, '24h')}`);
-
-  if (data.generatedAt) {
-    lines.push(`生成时间：${data.generatedAt}`);
-  }
-
+  if (data.generatedAt) lines.push(`生成时间：${data.generatedAt}`);
   lines.push('模式：TG 简版预览');
-  lines.push(`偏好：${preferenceSummary(data.preferences || {})}`);
-
-  lines.push('');
-  lines.push(formatUpstreamSummary(data.upstreamCalls));
-  if (failedCalls.length > 0) {
-    lines.push(`未成功：${failedCalls.map((call) => call.skill).join(' / ')}`);
-  }
 
   lines.push('');
   lines.push(`主线：${stringValue(data.marketTheme.summary, '数据不足，暂不下结论。')}`);
@@ -148,11 +136,8 @@ function renderTg(data) {
       const score = typeof item.score === 'number' ? `${item.score}/100` : '未评分';
       const action = item.action || item.verdict || '观察';
       const confidence = confidenceLabel(item.confidence || 'medium');
-      const flags = ensureArray(item.sourceFlags).length > 0 ? item.sourceFlags.join('+') : '未标注来源';
-      lines.push(`- ${symbol}${chain} | ${score} | ${action} | 置信度${confidence}`);
-      lines.push(`  理由：${stringValue(item.reason, '数据不足，暂不下结论。')}`);
-      lines.push(`  来源：${flags}`);
-      lines.push(`  风险：${stringValue(item.risk, '未见单独高亮风险。')}`);
+      lines.push(`- ${symbol}${chain}｜${action}｜${score}｜置信度${confidence}`);
+      lines.push(`  ${stringValue(item.reason, '数据不足，暂不下结论。')}`);
     }
   }
 
@@ -165,7 +150,14 @@ function renderTg(data) {
       const symbol = risk.symbol || risk.name || '未知代币';
       const chain = risk.chain ? ` [${risk.chain}]` : '';
       const severity = severityLabel(risk.severity || 'medium');
-      lines.push(`- ${symbol}${chain} | ${severity} | ${stringValue(risk.reason, '存在风险')}`);
+      lines.push(`- ${symbol}${chain}｜${severity}｜${stringValue(risk.reason, '存在风险')}`);
+    }
+  }
+
+  if (shouldShowFailureDetails(data, 'tg')) {
+    lines.push('');
+    for (const call of failedUpstreamCalls(data.upstreamCalls)) {
+      lines.push(`- 本轮未成功调用 \`${call.skill}\`${call.message ? `：${call.message}` : ''}`);
     }
   }
 
@@ -179,48 +171,83 @@ function renderTg(data) {
       lines.push(`- ${item}`);
     }
   }
+  lines.push('- DYOR。以上仅为研究整理，不构成任何建议。');
 
+  return `${lines.join('\n').trim()}\n`;
+}
+
+function renderTokenTg(data) {
+  const lines = [];
+  const token = getPrimaryToken(data);
+  const symbol = token.symbol || token.name || '未知代币';
+  const chain = token.chain ? ` [${token.chain}]` : '';
+  const score = typeof token.score === 'number' ? `${token.score}/100` : '未评分';
+  const action = token.action || token.verdict || '观察';
+
+  lines.push(`Alpha Radar | ${symbol}${chain} ${stringValue(data.window, '24h')}`);
+  if (data.generatedAt) lines.push(`生成时间：${data.generatedAt}`);
+  lines.push('模式：代币 TG 简版');
+
+  lines.push('');
+  lines.push(`结论：${action}｜${score}`);
+  lines.push(`看点：${stringValue(token.reason, '暂未获得充分结论。')}`);
+  lines.push(`关键数据：${formatMetrics(token.metrics || {})}`);
+  lines.push(`风险：${stringValue(token.risk, '未见单独高亮风险。')}`);
+  lines.push(`下一步：${stringValue(token.next, '继续观察资金、成交与风险是否共振。')}`);
+
+  if (shouldShowFailureDetails(data, 'tg')) {
+    lines.push('');
+    for (const call of failedUpstreamCalls(data.upstreamCalls)) {
+      lines.push(`- 本轮未成功调用 \`${call.skill}\`${call.message ? `：${call.message}` : ''}`);
+    }
+  }
+
+  lines.push('');
+  const conclusion = ensureArray(data.conclusion).slice(0, 2);
+  if (conclusion.length > 0) {
+    for (const item of conclusion) lines.push(`- ${item}`);
+  }
   lines.push('- DYOR。以上仅为研究整理，不构成任何建议。');
 
   return `${lines.join('\n').trim()}\n`;
 }
 
 function renderReport(data) {
+  if (data.queryType === 'token') {
+    return renderTokenReport(data);
+  }
+
   const label = scopeLabel(data);
   const sorted = sortWatchlist(data.watchlist);
-  const failedCalls = failedUpstreamCalls(data.upstreamCalls);
   const lines = [];
 
   lines.push(`# ${data.title || `Alpha Radar | ${label} | ${stringValue(data.window, '24h')}`}`);
-
-  if (data.generatedAt) {
-    lines.push(`生成时间：${data.generatedAt}`);
-  }
-
+  if (data.generatedAt) lines.push(`生成时间：${data.generatedAt}`);
   lines.push(`模式：${data.mode || 'report'}`);
   lines.push(`范围：${label}`);
   lines.push(`偏好：${preferenceSummary(data.preferences || {})}`);
   lines.push(`发布：${data.previewOnly !== false ? '仅预览，不发广场' : '可发布'}`);
   lines.push('');
 
-  lines.push('## 0、上游调用');
-  lines.push(formatUpstreamSummary(data.upstreamCalls));
-  if (failedCalls.length > 0) {
-    for (const call of failedCalls) {
-      lines.push(`- 本轮未成功调用 \`${call.skill}\`${call.message ? `：${call.message}` : ''}`);
+  if (shouldShowFailureDetails(data, 'report')) {
+    lines.push('## 0、上游调用');
+    for (const call of ensureArray(data.upstreamCalls)) {
+      if (call.status === 'failed') {
+        lines.push(`- 本轮未成功调用 \`${call.skill}\`${call.message ? `：${call.message}` : ''}`);
+      } else if (call.status === 'partial') {
+        lines.push(`- \`${call.skill}\` 部分成功${call.message ? `：${call.message}` : ''}`);
+      } else if (call.status === 'ok') {
+        lines.push(`- \`${call.skill}\` 成功`);
+      }
     }
+    lines.push('');
   }
-  lines.push('');
 
   lines.push('## 一、今日市场主线');
   lines.push(stringValue(data.marketTheme.summary, '数据不足，暂不下结论。'));
   const marketSignals = ensureArray(data.marketTheme.signals);
-  for (const signal of marketSignals) {
-    lines.push(`- ${signal}`);
-  }
-  if (data.marketTheme.stance) {
-    lines.push(`结论倾向：${data.marketTheme.stance}`);
-  }
+  for (const signal of marketSignals) lines.push(`- ${signal}`);
+  if (data.marketTheme.stance) lines.push(`结论倾向：${data.marketTheme.stance}`);
   lines.push('');
 
   lines.push('## 二、今日值得看名单');
@@ -232,17 +259,11 @@ function renderReport(data) {
       const chain = item.chain ? ` [${item.chain}]` : '';
       lines.push(`### ${symbol}${chain}`);
       lines.push(`动作：${item.action || item.verdict || '观察'}`);
-      if (typeof item.score === 'number') {
-        lines.push(`评分：${item.score}/100`);
-      }
+      if (typeof item.score === 'number') lines.push(`评分：${item.score}/100`);
       lines.push(`置信度：${confidenceLabel(item.confidence || 'medium')}`);
       const flags = ensureArray(item.sourceFlags);
-      if (flags.length > 0) {
-        lines.push(`来源标记：${flags.join(' / ')}`);
-      }
-      if (item.delta) {
-        lines.push(`变化：${item.delta}`);
-      }
+      if (flags.length > 0) lines.push(`来源标记：${flags.join(' / ')}`);
+      if (item.delta) lines.push(`变化：${item.delta}`);
       lines.push(`入选理由：${stringValue(item.reason, '数据不足，暂不下结论。')}`);
       lines.push(`关键数据：${formatMetrics(item.metrics || {})}`);
       lines.push(`当前风险点：${stringValue(item.risk, '未见单独高亮风险。')}`);
@@ -261,9 +282,7 @@ function renderReport(data) {
       const chain = risk.chain ? ` [${risk.chain}]` : '';
       lines.push(`- **${symbol}${chain}** | ${severityLabel(risk.severity || 'medium')} | ${risk.category || 'trading'}：${stringValue(risk.reason, '存在风险')}`);
       const flags = ensureArray(risk.flags);
-      if (flags.length > 0) {
-        lines.push(`  风险项：${flags.join('；')}`);
-      }
+      if (flags.length > 0) lines.push(`  风险项：${flags.join('；')}`);
     }
   }
   lines.push('');
@@ -274,9 +293,7 @@ function renderReport(data) {
   } else {
     lines.push(stringValue(data.walletAppendix.summary, '暂无附录数据。'));
     const notes = ensureArray(data.walletAppendix.notes);
-    for (const note of notes) {
-      lines.push(`- ${note}`);
-    }
+    for (const note of notes) lines.push(`- ${note}`);
   }
   lines.push('');
 
@@ -285,9 +302,76 @@ function renderReport(data) {
   if (conclusion.length === 0) {
     lines.push('- 数据不足，暂不下结论。');
   } else {
-    for (const item of conclusion) {
-      lines.push(`- ${item}`);
+    for (const item of conclusion) lines.push(`- ${item}`);
+  }
+  lines.push('- DYOR。以上仅为研究整理，不构成任何建议。');
+  lines.push('');
+
+  return `${lines.join('\n').trim()}\n`;
+}
+
+function renderTokenReport(data) {
+  const token = getPrimaryToken(data);
+  const symbol = token.symbol || token.name || '未知代币';
+  const chain = token.chain ? ` [${token.chain}]` : '';
+  const lines = [];
+
+  lines.push(`# ${data.title || `Alpha Radar | ${symbol}${chain} | ${stringValue(data.window, '24h')}`}`);
+  if (data.generatedAt) lines.push(`生成时间：${data.generatedAt}`);
+  lines.push(`模式：${data.mode || 'report'}`);
+  lines.push(`偏好：${preferenceSummary(data.preferences || {})}`);
+  lines.push(`发布：${data.previewOnly !== false ? '仅预览，不发广场' : '可发布'}`);
+  lines.push('');
+
+  if (shouldShowFailureDetails(data, 'report')) {
+    lines.push('## 0、上游调用');
+    for (const call of ensureArray(data.upstreamCalls)) {
+      if (call.status === 'failed') {
+        lines.push(`- 本轮未成功调用 \`${call.skill}\`${call.message ? `：${call.message}` : ''}`);
+      } else if (call.status === 'partial') {
+        lines.push(`- \`${call.skill}\` 部分成功${call.message ? `：${call.message}` : ''}`);
+      } else if (call.status === 'ok') {
+        lines.push(`- \`${call.skill}\` 成功`);
+      }
     }
+    lines.push('');
+  }
+
+  lines.push('## 一、代币概览');
+  lines.push(`代币：${symbol}${chain}`);
+  if (token.contractAddress) lines.push(`合约：${token.contractAddress}`);
+  lines.push(`动作：${token.action || token.verdict || '观察'}`);
+  if (typeof token.score === 'number') lines.push(`评分：${token.score}/100`);
+  lines.push(`置信度：${confidenceLabel(token.confidence || 'medium')}`);
+  lines.push(`核心判断：${stringValue(token.reason, '暂未获得充分结论。')}`);
+  lines.push(`关键数据：${formatMetrics(token.metrics || {})}`);
+  lines.push('');
+
+  lines.push('## 二、关键信号');
+  const flags = ensureArray(token.sourceFlags);
+  if (flags.length > 0) {
+    lines.push(`来源标记：${flags.join(' / ')}`);
+  } else {
+    lines.push('来源标记：未标注');
+  }
+  if (token.delta) lines.push(`变化：${token.delta}`);
+  lines.push(`下一步观察点：${stringValue(token.next, '继续观察资金、成交与风险是否共振。')}`);
+  lines.push('');
+
+  lines.push('## 三、风险提示');
+  lines.push(stringValue(token.risk, '未见单独高亮风险。'));
+  const riskAlerts = ensureArray(data.riskAlerts);
+  for (const risk of riskAlerts.slice(0, 3)) {
+    lines.push(`- ${stringValue(risk.reason, '存在风险')}`);
+  }
+  lines.push('');
+
+  lines.push('## 四、结论');
+  const conclusion = ensureArray(data.conclusion);
+  if (conclusion.length === 0) {
+    lines.push('- 数据不足，暂不下结论。');
+  } else {
+    for (const item of conclusion) lines.push(`- ${item}`);
   }
   lines.push('- DYOR。以上仅为研究整理，不构成任何建议。');
   lines.push('');
@@ -296,6 +380,10 @@ function renderReport(data) {
 }
 
 function renderSquare(data) {
+  if (data.queryType === 'token') {
+    return renderTokenSquare(data);
+  }
+
   const label = scopeLabel(data);
   const topItems = sortWatchlist(data.watchlist).slice(0, Math.min(getTopN(data, 3), 3));
   const topRisks = ensureArray(data.riskAlerts).slice(0, 2);
@@ -304,9 +392,7 @@ function renderSquare(data) {
   lines.push(`Alpha Radar｜${label} ${stringValue(data.window, '24h')} 预览`);
   lines.push('');
   lines.push(`主线：${stringValue(data.marketTheme.summary, '今日主线暂不明确。')}`);
-  if (data.marketTheme.stance) {
-    lines.push(`立场：${data.marketTheme.stance}`);
-  }
+  if (data.marketTheme.stance) lines.push(`立场：${data.marketTheme.stance}`);
 
   lines.push('');
   lines.push('值得看：');
@@ -340,6 +426,32 @@ function renderSquare(data) {
   lines.push('DYOR。以上仅为研究整理，不构成任何建议。');
 
   return `${lines.join('\n').trim()}\n`;
+}
+
+function renderTokenSquare(data) {
+  const token = getPrimaryToken(data);
+  const symbol = token.symbol || token.name || '未知代币';
+  const chain = token.chain ? ` [${token.chain}]` : '';
+  const score = typeof token.score === 'number' ? `${token.score}/100` : '未评分';
+  const action = token.action || token.verdict || '观察';
+  const lines = [];
+
+  lines.push(`Alpha Radar｜${symbol}${chain} ${stringValue(data.window, '24h')} 预览`);
+  lines.push('');
+  lines.push(`结论：${action}｜${score}`);
+  lines.push(`看点：${stringValue(token.reason, '暂未获得充分结论。')}`);
+  lines.push(`关键数据：${formatMetrics(token.metrics || {})}`);
+  lines.push(`风险：${stringValue(token.risk, '未见单独高亮风险。')}`);
+  lines.push('DYOR。以上仅为研究整理，不构成任何建议。');
+
+  return `${lines.join('\n').trim()}\n`;
+}
+
+function renderTg(data) {
+  if (data.queryType === 'token') {
+    return renderTokenTg(data);
+  }
+  return renderMarketTg(data);
 }
 
 module.exports = {
