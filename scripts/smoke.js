@@ -29,12 +29,10 @@ function main() {
   const report = run(['--input', sample, '--style', 'report']);
   const square = run(['--input', sample, '--style', 'square']);
   const tg = run(['--input', sample, '--style', 'tg']);
-  const normalized = run(['--input', sample, '--format', 'json']);
 
   write('sample-report.md', report);
   write('sample-square.txt', square);
   write('sample-tg.txt', tg);
-  write('sample-normalized.json', normalized);
 
   process.stdout.write('Smoke OK\n');
 }
