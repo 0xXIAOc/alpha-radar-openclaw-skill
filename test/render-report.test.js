@@ -157,3 +157,48 @@ test('render token card works for Base token', () => {
   assert.match(output, /看点：/);
   assert.match(output, /风险：/);
 });
+
+test('renderTg still shows spot sections when spot call fails', () => {
+  const output = renderTg(
+    validateReportData({
+      ...sample,
+      upstreamCalls: [
+        { skill: 'spot', status: 'failed', message: 'mock fail' },
+        { skill: 'crypto-market-rank', status: 'ok' },
+        { skill: 'query-token-info', status: 'ok' },
+        { skill: 'trading-signal', status: 'ok' },
+        { skill: 'query-token-audit', status: 'ok' }
+      ],
+      spotLeaderboards: {
+        gainersTop3: [],
+        losersTop3: []
+      }
+    })
+  );
+
+  assert.match(output, /现货涨幅前三/);
+  assert.match(output, /本轮未成功调用 `spot`/);
+  assert.match(output, /现货跌幅前三/);
+});
+
+test('renderSquare still shows spot sections when spot call fails', () => {
+  const output = renderSquare(
+    validateReportData({
+      ...sample,
+      upstreamCalls: [
+        { skill: 'spot', status: 'failed', message: 'mock fail' },
+        { skill: 'crypto-market-rank', status: 'ok' },
+        { skill: 'query-token-info', status: 'ok' },
+        { skill: 'trading-signal', status: 'ok' },
+        { skill: 'query-token-audit', status: 'ok' }
+      ],
+      spotLeaderboards: {
+        gainersTop3: [],
+        losersTop3: []
+      }
+    })
+  );
+
+  assert.match(output, /现货涨幅前三/);
+  assert.match(output, /本轮未成功调用 `spot`/);
+});
