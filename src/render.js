@@ -11,6 +11,10 @@ function ensureArray(value) {
   return Array.isArray(value) ? value : [];
 }
 
+function hasValue(value) {
+  return value !== null && value !== undefined && value !== '';
+}
+
 function scoreValue(item) {
   return typeof item?.score === 'number' ? item.score : -1;
 }
@@ -31,7 +35,7 @@ function defaultHelpCards() {
   return [
     {
       title: '全网速览',
-      description: '看全网 24h 主线、现货涨跌榜、热度榜、钱包热度和 Meme 雷达。',
+      description: '看全网 24h 主线、恐惧贪婪指数、现货涨跌榜、Alpha 成交量榜、U 本位资金费率榜和 Meme 雷达。',
       examples: ['/alpha 全网', '/alpha global']
     },
     {
@@ -45,14 +49,14 @@ function defaultHelpCards() {
       examples: ['/alpha 代币=ROBO', '查询ROBO的信息']
     },
     {
+      title: 'Alpha / 合约增强',
+      description: '补充 Alpha 币 24h 成交量榜、U 本位资金费率和涨幅榜。',
+      examples: ['Alpha 币榜', 'U本位资金费率', '合约情绪怎么看']
+    },
+    {
       title: '广场文案',
       description: '生成可直接发 Binance Square 的文案草稿。',
       examples: ['/alpha 全网 广场版 前3', '/alpha 全网 广场版 署名开 不再询问']
-    },
-    {
-      title: '偏好设置',
-      description: '控制显示模块和风格偏好。',
-      examples: ['谨慎', '钱包关', '现货关', '热度开', '钱包热度关', 'meme开', '衍生品关']
     }
   ];
 }
@@ -88,7 +92,7 @@ function metricRows(metrics = {}) {
     ['Smart Money', metrics.smartMoney],
     ['风险等级', metrics.riskLevel],
     ['24h搜索', metrics.searchCount24h]
-  ].filter(([, value]) => value !== undefined && value !== null && value !== '');
+  ].filter(([, value]) => hasValue(value));
 }
 
 function formatMetrics(metrics = {}) {
@@ -102,7 +106,7 @@ function formatMetricsCompact(metrics = {}) {
     ['24h涨跌', metrics.priceChange24h],
     ['24h成交量', metrics.volume24h],
     ['风险等级', metrics.riskLevel]
-  ].filter(([, value]) => value !== undefined && value !== null && value !== '');
+  ].filter(([, value]) => hasValue(value));
 
   if (pairs.length === 0) return '关键数据未提供';
   return pairs.map(([label, value]) => `${label}：${value}`).join('；');
@@ -136,6 +140,16 @@ function severityLabel(value) {
   if (value === 'high') return '高';
   if (value === 'low') return '低';
   return '中';
+}
+
+function fearGreedLabel(value) {
+  const normalized = String(value || '').trim().toLowerCase();
+  if (normalized === 'extreme fear') return '极度恐惧';
+  if (normalized === 'fear') return '恐惧';
+  if (normalized === 'neutral') return '中性';
+  if (normalized === 'greed') return '贪婪';
+  if (normalized === 'extreme greed') return '极度贪婪';
+  return String(value || '');
 }
 
 function getTopN(data, fallback) {
@@ -179,7 +193,7 @@ function formatLeaderboardItem(item, defaultLabel) {
   const symbol = item?.symbol || item?.name || '未知代币';
   const chain = item?.chain ? ` [${item.chain}]` : '';
   const metricLabel = item?.metricLabel || defaultLabel || '';
-  const metricValue = item?.metricValue !== undefined && item?.metricValue !== null && item?.metricValue !== '' ? item.metricValue : '';
+  const metricValue = hasValue(item?.metricValue) ? item.metricValue : '';
   const note = item?.note ? `｜${item.note}` : '';
 
   if (metricLabel && metricValue) return `${symbol}${chain}｜${metricLabel} ${metricValue}${note}`;
@@ -226,12 +240,31 @@ function renderMemeRadarLines(memeRadar = {}, fallbackText = '暂无 Meme 雷达
   return lines;
 }
 
+function renderFearGreedLines(
+  fearGreedIndex = {},
+  fallbackText = '本轮未成功获取加密货币恐惧和贪婪指数',
+  options = {}
+) {
+  const { inlineLabel = true } = options;
+  const value = fearGreedIndex?.value;
+  const classification = fearGreedLabel(fearGreedIndex?.classification);
+  const source = fearGreedIndex?.source ? `｜来源：${fearGreedIndex.source}` : '';
+  const updatedAt = fearGreedIndex?.updatedAt ? `｜更新时间：${fearGreedIndex.updatedAt}` : '';
+
+  if (!hasValue(value)) {
+    return [inlineLabel ? `加密货币恐惧和贪婪指数：${fallbackText}` : fallbackText];
+  }
+
+  const summary = `${value}${classification ? `（${classification}）` : ''}${source}${updatedAt}`;
+  return [inlineLabel ? `加密货币恐惧和贪婪指数：${summary}` : summary];
+}
+
 function isFailedFuturesPanel(panel) {
   return String(panel?.stance || '').startsWith('获取失败');
 }
 
 function formatSignedPercent(value) {
-  if (value === null || value === undefined || value === '') return '';
+  if (!hasValue(value)) return '';
   const num = Number(value);
   if (!Number.isFinite(num)) return String(value);
   const fixed = Number.isInteger(num)
@@ -241,7 +274,7 @@ function formatSignedPercent(value) {
 }
 
 function formatReadableDollar(value) {
-  if (value === null || value === undefined || value === '') return '';
+  if (!hasValue(value)) return '';
   const num = Number(String(value).replace(/,/g, ''));
   if (!Number.isFinite(num)) return String(value);
   return `$${Math.round(num).toLocaleString('en-US')}`;
@@ -252,22 +285,22 @@ function formatFuturesPanel(panel) {
   const parts = [];
 
   if (panel?.stance) parts.push(panel.stance);
-  if (panel?.topLongShortRatio !== null && panel?.topLongShortRatio !== undefined) {
+  if (hasValue(panel?.topLongShortRatio)) {
     parts.push(`大户多空 ${panel.topLongShortRatio}`);
   }
-  if (panel?.globalLongShortRatio !== null && panel?.globalLongShortRatio !== undefined) {
+  if (hasValue(panel?.globalLongShortRatio)) {
     parts.push(`全市场多空 ${panel.globalLongShortRatio}`);
   }
-  if (panel?.openInterestValue !== null && panel?.openInterestValue !== undefined && panel?.openInterestValue !== '') {
+  if (hasValue(panel?.openInterestValue)) {
     parts.push(`持仓 ${formatReadableDollar(panel.openInterestValue)}`);
   }
-  if (panel?.openInterestChangePct !== null && panel?.openInterestChangePct !== undefined) {
+  if (hasValue(panel?.openInterestChangePct)) {
     parts.push(`OI ${formatSignedPercent(panel.openInterestChangePct)}`);
   }
-  if (panel?.fundingRate !== null && panel?.fundingRate !== undefined) {
+  if (hasValue(panel?.fundingRate)) {
     parts.push(`费率 ${panel.fundingRate}`);
   }
-  if (panel?.takerBuySellRatio !== null && panel?.takerBuySellRatio !== undefined) {
+  if (hasValue(panel?.takerBuySellRatio)) {
     parts.push(`主动买卖 ${panel.takerBuySellRatio}`);
   }
 
@@ -400,8 +433,6 @@ function renderHelp(data) {
   lines.push('- 谨慎 / 均衡 / 激进');
   lines.push('- 钱包开 / 钱包关');
   lines.push('- 现货开 / 现货关');
-  lines.push('- 热度开 / 热度关');
-  lines.push('- 钱包热度开 / 钱包热度关');
   lines.push('- meme开 / meme关');
   lines.push('- 衍生品开 / 衍生品关');
   lines.push('- 署名开 / 署名关');
@@ -412,6 +443,8 @@ function renderHelp(data) {
   lines.push('- /alpha base');
   lines.push('- /alpha 代币=ROBO');
   lines.push('- /alpha 全网 广场版 前3');
+  lines.push('- Alpha 币榜');
+  lines.push('- U本位资金费率');
   lines.push('- 查询ROBO的信息');
 
   return `${lines.join('\n').trim()}\n`;
@@ -424,14 +457,19 @@ function renderMarketTg(data) {
   const topRisks = ensureArray(data?.riskAlerts).slice(0, 2);
 
   const spotReady = hasSuccessfulUpstreamCall(data, ['spot', 'spot-public-api']);
-  const rankReady = hasSuccessfulUpstreamCall(data, ['crypto-market-rank']);
-  const memeReady = hasSuccessfulUpstreamCall(data, ['meme-rush']);
-  const futuresReady = hasSuccessfulUpstreamCall(data, ['trading-signal', 'futures-public-api']);
+  const alphaReady = hasSuccessfulUpstreamCall(data, ['alpha']);
+  const futuresReady = hasSuccessfulUpstreamCall(data, [
+    'trading-signal',
+    'futures-public-api',
+    'derivatives-trading-usds-futures'
+  ]);
+  const memeReady = hasSuccessfulUpstreamCall(data, ['meme-rush', 'crypto-market-rank']);
 
   lines.push(`📊 Alpha Radar｜${label} ${stringValue(data?.window, '24h')} 预览`);
+  lines.push(...renderFearGreedLines(data?.fearGreedIndex || {}, '本轮未成功获取加密货币恐惧和贪婪指数'));
   lines.push(`主线一句话：${stringValue(data?.marketTheme?.summary, '数据不足，暂不下结论。')}`);
 
-  const spotGainers =
+  const sections = [
     data?.preferences?.showSpotLeaderboards === false
       ? []
       : renderRequiredList(
@@ -439,9 +477,7 @@ function renderMarketTg(data) {
           data?.spotLeaderboards?.gainersTop3,
           '涨幅',
           spotReady ? '暂无现货涨幅数据' : '本轮未成功调用 `spot`'
-        );
-
-  const spotLosers =
+        ),
     data?.preferences?.showSpotLeaderboards === false
       ? []
       : renderRequiredList(
@@ -449,47 +485,61 @@ function renderMarketTg(data) {
           data?.spotLeaderboards?.losersTop3,
           '跌幅',
           spotReady ? '暂无现货跌幅数据' : '本轮未成功调用 `spot`'
-        );
-
-  const futuresSentiment =
+        ),
+    renderRequiredList(
+      'Alpha 24h 成交量前 3',
+      data?.alphaLeaderboards?.volumeTop3,
+      '24h成交量',
+      alphaReady ? '暂无 Alpha 24h 成交量数据' : '本轮未成功调用 `alpha`'
+    ),
+    renderRequiredList(
+      'Alpha 24h 成交量前 3（未上 U 本位合约）',
+      data?.alphaLeaderboards?.volumeTop3NoUsdsFutures,
+      '24h成交量',
+      alphaReady ? '暂无未上 U 本位合约的 Alpha 成交量数据' : '本轮未成功调用 `alpha`'
+    ),
+    data?.preferences?.showFuturesSentiment === false
+      ? []
+      : renderRequiredList(
+          'U 本位当前资金费最高 TOP 1',
+          data?.futuresLeaderboards?.fundingTop3,
+          '资金费率',
+          futuresReady ? '暂无 U 本位资金费率数据' : '本轮未成功调用 `derivatives-trading-usds-futures`',
+          1
+        ),
+    data?.preferences?.showFuturesSentiment === false
+      ? []
+      : renderRequiredList(
+          'U 本位当前资金费最高 TOP 3',
+          data?.futuresLeaderboards?.fundingTop3,
+          '资金费率',
+          futuresReady ? '暂无 U 本位资金费率数据' : '本轮未成功调用 `derivatives-trading-usds-futures`'
+        ),
+    data?.preferences?.showFuturesSentiment === false
+      ? []
+      : renderRequiredList(
+          'U 本位合约 24h 涨幅 TOP 3 + 对应资金费率',
+          data?.futuresLeaderboards?.gainersTop3WithFunding,
+          '24h涨幅',
+          futuresReady ? '暂无 U 本位涨幅 + 资金费率数据' : '本轮未成功调用 `derivatives-trading-usds-futures`'
+        ),
     data?.preferences?.showFuturesSentiment === false || !(hasFuturesSentimentData(data) || futuresReady)
       ? []
       : renderFuturesSentimentLines(
           data?.futuresSentiment || {},
           futuresReady ? '暂无衍生品情绪数据' : '本轮未成功调用 `trading-signal`',
           { inlineLabel: true, maxPanels: 3 }
-        );
-
-  const exchangeHot =
-    data?.preferences?.showExchangeHot === false
-      ? []
-      : renderRequiredList(
-          '交易所热度前三',
-          data?.leaderboards?.exchangeHotTop3,
-          '热度',
-          rankReady ? '暂无交易所热度数据' : '本轮未成功调用 `crypto-market-rank`'
-        );
-
-  const walletHot =
-    data?.preferences?.showWalletHot === false
-      ? []
-      : renderRequiredList(
-          '钱包热度前三',
-          data?.leaderboards?.walletHotTop3,
-          '热度',
-          rankReady ? '暂无钱包热度数据' : '本轮未成功调用 `crypto-market-rank`'
-        );
-
-  const memeRadar =
+        ),
     data?.preferences?.showMemeRadar === false
       ? []
       : renderMemeRadarLines(
           data?.memeRadar || {},
           memeReady ? '暂无 Meme 雷达数据' : '本轮未成功调用 `meme-rush`',
           { inlineLabel: true, maxItems: 3 }
-        );
+        )
+  ];
 
-  [spotGainers, spotLosers, futuresSentiment, exchangeHot, walletHot, memeRadar].forEach((section) => {
+  sections.forEach((section) => {
     if (section.length) {
       lines.push('');
       lines.push(...section);
@@ -631,14 +681,24 @@ function renderMarketReport(data) {
   const lines = [];
 
   const spotReady = hasSuccessfulUpstreamCall(data, ['spot', 'spot-public-api']);
-  const rankReady = hasSuccessfulUpstreamCall(data, ['crypto-market-rank']);
-  const memeReady = hasSuccessfulUpstreamCall(data, ['meme-rush']);
-  const futuresReady = hasSuccessfulUpstreamCall(data, ['trading-signal', 'futures-public-api']);
+  const alphaReady = hasSuccessfulUpstreamCall(data, ['alpha']);
+  const futuresReady = hasSuccessfulUpstreamCall(data, [
+    'trading-signal',
+    'futures-public-api',
+    'derivatives-trading-usds-futures'
+  ]);
+  const memeReady = hasSuccessfulUpstreamCall(data, ['meme-rush', 'crypto-market-rank']);
 
   lines.push(`# ${data?.title || `Alpha Radar | ${label} | ${stringValue(data?.window, '24h')}`}`);
   if (data?.generatedAt) lines.push(`生成时间：${data.generatedAt}`);
   lines.push(`范围：${label}`);
   lines.push('');
+
+  appendSection(
+    lines,
+    '## 加密货币恐惧和贪婪指数',
+    renderFearGreedLines(data?.fearGreedIndex || {}, '本轮未成功获取加密货币恐惧和贪婪指数', { inlineLabel: false })
+  );
 
   appendSection(lines, '## 今日市场主线', renderMarketThemeLines(data?.marketTheme || {}));
 
@@ -666,6 +726,64 @@ function renderMarketReport(data) {
     );
   }
 
+  appendSection(
+    lines,
+    '## Alpha 24h 成交量前 3',
+    renderRequiredList(
+      'Alpha 24h 成交量前 3',
+      data?.alphaLeaderboards?.volumeTop3,
+      '24h成交量',
+      alphaReady ? '暂无 Alpha 24h 成交量数据' : '本轮未成功调用 `alpha`'
+    ).slice(1)
+  );
+
+  appendSection(
+    lines,
+    '## Alpha 24h 成交量前 3（未上 U 本位合约）',
+    renderRequiredList(
+      'Alpha 24h 成交量前 3（未上 U 本位合约）',
+      data?.alphaLeaderboards?.volumeTop3NoUsdsFutures,
+      '24h成交量',
+      alphaReady ? '暂无未上 U 本位合约的 Alpha 成交量数据' : '本轮未成功调用 `alpha`'
+    ).slice(1)
+  );
+
+  if (data?.preferences?.showFuturesSentiment !== false) {
+    appendSection(
+      lines,
+      '## U 本位当前资金费最高 TOP 1',
+      renderRequiredList(
+        'U 本位当前资金费最高 TOP 1',
+        data?.futuresLeaderboards?.fundingTop3,
+        '资金费率',
+        futuresReady ? '暂无 U 本位资金费率数据' : '本轮未成功调用 `derivatives-trading-usds-futures`',
+        1
+      ).slice(1)
+    );
+
+    appendSection(
+      lines,
+      '## U 本位当前资金费最高 TOP 3',
+      renderRequiredList(
+        'U 本位当前资金费最高 TOP 3',
+        data?.futuresLeaderboards?.fundingTop3,
+        '资金费率',
+        futuresReady ? '暂无 U 本位资金费率数据' : '本轮未成功调用 `derivatives-trading-usds-futures`'
+      ).slice(1)
+    );
+
+    appendSection(
+      lines,
+      '## U 本位合约 24h 涨幅 TOP 3 + 对应资金费率',
+      renderRequiredList(
+        'U 本位合约 24h 涨幅 TOP 3 + 对应资金费率',
+        data?.futuresLeaderboards?.gainersTop3WithFunding,
+        '24h涨幅',
+        futuresReady ? '暂无 U 本位涨幅 + 资金费率数据' : '本轮未成功调用 `derivatives-trading-usds-futures`'
+      ).slice(1)
+    );
+  }
+
   if (data?.preferences?.showFuturesSentiment !== false && (hasFuturesSentimentData(data) || futuresReady)) {
     appendSection(
       lines,
@@ -675,32 +793,6 @@ function renderMarketReport(data) {
         futuresReady ? '暂无衍生品情绪数据' : '本轮未成功调用 `trading-signal`',
         { inlineLabel: false, maxPanels: 3 }
       )
-    );
-  }
-
-  if (data?.preferences?.showExchangeHot !== false) {
-    appendSection(
-      lines,
-      '## 交易所热度前三',
-      renderRequiredList(
-        '交易所热度前三',
-        data?.leaderboards?.exchangeHotTop3,
-        '热度',
-        rankReady ? '暂无交易所热度数据' : '本轮未成功调用 `crypto-market-rank`'
-      ).slice(1)
-    );
-  }
-
-  if (data?.preferences?.showWalletHot !== false) {
-    appendSection(
-      lines,
-      '## 钱包热度前三',
-      renderRequiredList(
-        '钱包热度前三',
-        data?.leaderboards?.walletHotTop3,
-        '热度',
-        rankReady ? '暂无钱包热度数据' : '本轮未成功调用 `crypto-market-rank`'
-      ).slice(1)
     );
   }
 
@@ -827,12 +919,17 @@ function renderSquare(data) {
   const topRisks = ensureArray(data?.riskAlerts).slice(0, 2);
 
   const spotReady = hasSuccessfulUpstreamCall(data, ['spot', 'spot-public-api']);
-  const rankReady = hasSuccessfulUpstreamCall(data, ['crypto-market-rank']);
-  const memeReady = hasSuccessfulUpstreamCall(data, ['meme-rush']);
-  const futuresReady = hasSuccessfulUpstreamCall(data, ['trading-signal', 'futures-public-api']);
+  const alphaReady = hasSuccessfulUpstreamCall(data, ['alpha']);
+  const futuresReady = hasSuccessfulUpstreamCall(data, [
+    'trading-signal',
+    'futures-public-api',
+    'derivatives-trading-usds-futures'
+  ]);
+  const memeReady = hasSuccessfulUpstreamCall(data, ['meme-rush', 'crypto-market-rank']);
 
   lines.push(`Alpha Radar｜${label} ${stringValue(data?.window, '24h')} 预览`);
   lines.push('');
+  lines.push(...renderFearGreedLines(data?.fearGreedIndex || {}, '本轮未成功获取加密货币恐惧和贪婪指数'));
   lines.push(`主线：${stringValue(data?.marketTheme?.summary, '今日主线暂不明确。')}`);
 
   const sections = [
@@ -852,28 +949,42 @@ function renderSquare(data) {
           '跌幅',
           spotReady ? '暂无现货跌幅数据' : '本轮未成功调用 `spot`'
         ),
-    data?.preferences?.showFuturesSentiment === false || !(hasFuturesSentimentData(data) || futuresReady)
-      ? []
-      : renderFuturesSentimentLines(
-          data?.futuresSentiment || {},
-          futuresReady ? '暂无衍生品情绪数据' : '本轮未成功调用 `trading-signal`',
-          { inlineLabel: true, maxPanels: 2 }
-        ),
-    data?.preferences?.showExchangeHot === false
-      ? []
-      : renderRequiredList(
-          '交易所热度前三',
-          data?.leaderboards?.exchangeHotTop3,
-          '热度',
-          rankReady ? '暂无交易所热度数据' : '本轮未成功调用 `crypto-market-rank`'
-        ),
-    data?.preferences?.showWalletHot === false
+    renderRequiredList(
+      'Alpha 24h 成交量前 3',
+      data?.alphaLeaderboards?.volumeTop3,
+      '24h成交量',
+      alphaReady ? '暂无 Alpha 24h 成交量数据' : '本轮未成功调用 `alpha`'
+    ),
+    renderRequiredList(
+      'Alpha 24h 成交量前 3（未上 U 本位合约）',
+      data?.alphaLeaderboards?.volumeTop3NoUsdsFutures,
+      '24h成交量',
+      alphaReady ? '暂无未上 U 本位合约的 Alpha 成交量数据' : '本轮未成功调用 `alpha`'
+    ),
+    data?.preferences?.showFuturesSentiment === false
       ? []
       : renderRequiredList(
-          '钱包热度前三',
-          data?.leaderboards?.walletHotTop3,
-          '热度',
-          rankReady ? '暂无钱包热度数据' : '本轮未成功调用 `crypto-market-rank`'
+          'U 本位当前资金费最高 TOP 1',
+          data?.futuresLeaderboards?.fundingTop3,
+          '资金费率',
+          futuresReady ? '暂无 U 本位资金费率数据' : '本轮未成功调用 `derivatives-trading-usds-futures`',
+          1
+        ),
+    data?.preferences?.showFuturesSentiment === false
+      ? []
+      : renderRequiredList(
+          'U 本位当前资金费最高 TOP 3',
+          data?.futuresLeaderboards?.fundingTop3,
+          '资金费率',
+          futuresReady ? '暂无 U 本位资金费率数据' : '本轮未成功调用 `derivatives-trading-usds-futures`'
+        ),
+    data?.preferences?.showFuturesSentiment === false
+      ? []
+      : renderRequiredList(
+          'U 本位合约 24h 涨幅 TOP 3 + 对应资金费率',
+          data?.futuresLeaderboards?.gainersTop3WithFunding,
+          '24h涨幅',
+          futuresReady ? '暂无 U 本位涨幅 + 资金费率数据' : '本轮未成功调用 `derivatives-trading-usds-futures`'
         ),
     data?.preferences?.showMemeRadar === false
       ? []
@@ -957,6 +1068,7 @@ module.exports = {
   scopeLabel,
   renderRequiredList,
   renderMemeRadarLines,
+  renderFearGreedLines,
   renderFuturesSentimentLines,
   finalizeSquareContent,
   summarizeConclusionText,
