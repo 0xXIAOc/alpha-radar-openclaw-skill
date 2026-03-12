@@ -4,7 +4,7 @@
 const fs = require('fs');
 const path = require('path');
 const { validateReportData } = require('../src/schema');
-const { renderTg, renderReport, renderSquare } = require('../src/render');
+const { renderTg, renderReport, renderSquare, defaultHelpCards } = require('../src/render');
 
 const RESERVED_SCOPE_WORDS = new Set(['auto', 'global', 'solana', 'bsc', 'base', 'eth', 'ethereum']);
 const CHINESE_TOP_MAP = {
@@ -99,6 +99,9 @@ function parseArgs(argv) {
     } else if (token === '--show-meme') {
       args.showMeme = readOptionValue(argv, i, token);
       i += 1;
+    } else if (token === '--show-futures') {
+      args.showFutures = readOptionValue(argv, i, token);
+      i += 1;
     } else if (token === '--command') {
       args.command = readOptionValue(argv, i, token);
       i += 1;
@@ -149,6 +152,7 @@ function usage() {
     '  --show-exchange-hot <bool>',
     '  --show-wallet-hot <bool>',
     '  --show-meme <bool>',
+    '  --show-futures <bool>',
     '  --command "<raw>"         parse Chinese aliases from raw command'
   ].join('\n');
 }
@@ -195,10 +199,6 @@ function normalizeScope(value) {
   if (normalized === 'base') return 'base';
   if (normalized === 'ethereum') return 'ethereum';
   if (normalized === 'eth') return 'eth';
-
-  if (['auto', 'global', 'solana', 'bsc', 'base', 'eth', 'ethereum', 'custom'].includes(normalized)) {
-    return normalized;
-  }
 
   return 'custom';
 }
@@ -288,6 +288,8 @@ function parseNaturalCommand(raw) {
   if (/(^|\s)(钱包热度开)(\s|$)/.test(text)) result.showWalletHot = 'true';
   if (/(^|\s)(meme关)(\s|$)/i.test(text)) result.showMeme = 'false';
   if (/(^|\s)(meme开)(\s|$)/i.test(text)) result.showMeme = 'true';
+  if (/(^|\s)(衍生品关|合约关)(\s|$)/.test(text)) result.showFutures = 'false';
+  if (/(^|\s)(衍生品开|合约开)(\s|$)/.test(text)) result.showFutures = 'true';
 
   if (/(^|\s)(署名开)(\s|$)/.test(text)) result.disclosure = 'true';
   if (/(^|\s)(署名关)(\s|$)/.test(text)) result.disclosure = 'false';
@@ -341,36 +343,6 @@ function parseNaturalCommand(raw) {
   }
 
   return result;
-}
-
-function defaultHelpCards() {
-  return [
-    {
-      title: '全网速览',
-      description: '看全网 24h 主线、现货涨跌榜、热度榜、钱包热度和 Meme 雷达。',
-      examples: ['/alpha 全网', '/alpha global']
-    },
-    {
-      title: '分链速览',
-      description: '看 Solana / BSC / Base 单链视角。',
-      examples: ['/alpha base', '/alpha bsc', '/alpha solana']
-    },
-    {
-      title: '指定代币体检',
-      description: '查某个币的价格、流动性、风险、信号与结论。',
-      examples: ['/alpha 代币=ROBO', '查询ROBO的信息']
-    },
-    {
-      title: '广场文案',
-      description: '生成可直接发 Binance Square 的文案草稿。',
-      examples: ['/alpha 全网 广场版 前3', '/alpha 全网 广场版 署名开 不再询问']
-    },
-    {
-      title: '偏好设置',
-      description: '控制显示模块和风格偏好。',
-      examples: ['谨慎', '钱包关', '现货关', '热度开', 'meme开']
-    }
-  ];
 }
 
 function chainLabelFromScope(scope, fallback = 'Auto') {
@@ -449,6 +421,7 @@ function normalizeData(raw, args = {}) {
       ...(mergedArgs.showExchangeHot !== undefined ? { showExchangeHot: normalizeBoolean(mergedArgs.showExchangeHot, validated.preferences?.showExchangeHot !== false) } : {}),
       ...(mergedArgs.showWalletHot !== undefined ? { showWalletHot: normalizeBoolean(mergedArgs.showWalletHot, validated.preferences?.showWalletHot !== false) } : {}),
       ...(mergedArgs.showMeme !== undefined ? { showMemeRadar: normalizeBoolean(mergedArgs.showMeme, validated.preferences?.showMemeRadar !== false) } : {}),
+      ...(mergedArgs.showFutures !== undefined ? { showFuturesSentiment: normalizeBoolean(mergedArgs.showFutures, validated.preferences?.showFuturesSentiment !== false) } : {}),
       ...(mergedArgs.disclosure !== undefined ? { squareDisclosureEnabled: normalizeBoolean(mergedArgs.disclosure, validated.preferences?.squareDisclosureEnabled === true) } : {}),
       ...(mergedArgs.askDisclosure !== undefined ? { squareDisclosureAskEveryTime: normalizeBoolean(mergedArgs.askDisclosure, validated.preferences?.squareDisclosureAskEveryTime !== false) } : {})
     },
