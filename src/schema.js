@@ -22,6 +22,10 @@ const PreferencesSchema = z
     lang: z.enum(['zh', 'en']).default('zh'),
     wallet: z.boolean().default(true),
     preview: z.boolean().default(true),
+    showSpotLeaderboards: z.boolean().default(true),
+    showExchangeHot: z.boolean().default(true),
+    showWalletHot: z.boolean().default(true),
+    showMemeRadar: z.boolean().default(true),
     squareDisclosureEnabled: z.boolean().default(false),
     squareDisclosureAskEveryTime: z.boolean().default(true)
   })
@@ -32,6 +36,10 @@ const PreferencesSchema = z
     lang: 'zh',
     wallet: true,
     preview: true,
+    showSpotLeaderboards: true,
+    showExchangeHot: true,
+    showWalletHot: true,
+    showMemeRadar: true,
     squareDisclosureEnabled: false,
     squareDisclosureAskEveryTime: true
   });
@@ -103,49 +111,45 @@ const LeaderboardItemSchema = z.object({
   note: z.string().optional()
 });
 
-const LeaderboardsSchema = z
+const SpotLeaderboardsSchema = z
   .object({
     gainersTop3: z.array(LeaderboardItemSchema).default([]),
-    losersTop3: z.array(LeaderboardItemSchema).default([]),
+    losersTop3: z.array(LeaderboardItemSchema).default([])
+  })
+  .default({
+    gainersTop3: [],
+    losersTop3: []
+  });
+
+const LeaderboardsSchema = z
+  .object({
     exchangeHotTop3: z.array(LeaderboardItemSchema).default([]),
     walletHotTop3: z.array(LeaderboardItemSchema).default([])
   })
   .default({
-    gainersTop3: [],
-    losersTop3: [],
     exchangeHotTop3: [],
     walletHotTop3: []
   });
 
-const FocusItemSchema = z.object({
-  symbol: z.string().optional(),
-  name: z.string().optional(),
-  chain: z.string().optional(),
-  reason: z.string().optional(),
-  note: z.string().optional()
-});
-
-const FuturesTemperatureSchema = z
-  .object({
-    summary: z.string().optional(),
-    preferredChain: z.string().optional(),
-    notes: z.array(z.string()).optional()
-  })
-  .default({});
-
 const MemeRadarSchema = z
   .object({
     summary: z.string().optional(),
-    top3: z.array(FocusItemSchema).default([])
+    top3: z
+      .array(
+        z.object({
+          symbol: z.string().optional(),
+          name: z.string().optional(),
+          chain: z.string().optional(),
+          reason: z.string().optional(),
+          note: z.string().optional()
+        })
+      )
+      .default([])
   })
-  .default({});
-
-const SpotFocusSchema = z
-  .object({
-    summary: z.string().optional(),
-    top3: z.array(FocusItemSchema).default([])
-  })
-  .default({});
+  .default({
+    summary: '',
+    top3: []
+  });
 
 const ReportDataSchema = z.object({
   title: z.string().optional(),
@@ -167,9 +171,8 @@ const ReportDataSchema = z.object({
       stance: z.string().optional()
     })
     .default({}),
+  spotLeaderboards: SpotLeaderboardsSchema,
   leaderboards: LeaderboardsSchema,
-  spotFocus: SpotFocusSchema,
-  futuresTemperature: FuturesTemperatureSchema,
   memeRadar: MemeRadarSchema,
   watchlist: z.array(WatchlistItemSchema).default([]),
   riskAlerts: z.array(RiskAlertSchema).default([]),
@@ -203,9 +206,8 @@ module.exports = {
   ActionSchema,
   PreferencesSchema,
   TokenQuerySchema,
+  SpotLeaderboardsSchema,
   LeaderboardsSchema,
-  SpotFocusSchema,
-  FuturesTemperatureSchema,
   MemeRadarSchema,
   ReportDataSchema,
   validateReportData
