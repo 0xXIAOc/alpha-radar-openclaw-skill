@@ -1,12 +1,12 @@
 ---
 name: alpha
-description: Use this skill when the user asks to generate a Binance daily market report, Solana/BSC report, global report, Watchlist Delta Report, Alpha Radar report, token report, risk alert report, smart money appendix, or Binance Square preview. Trigger strongly on Chinese requests like “生成今日日报”, “按 Alpha Radar 模板生成日报”, “生成全网 watchlist”, “生成风险警报”, “生成 Binance Square 预览”, “只预览不发广场”, “给我一个短版”, “给我一个 TG 版”, “查询ROBO的信息”, “查询代币ROBO”, “查一下ROBO”, “ROBO怎么样”, “全网广场版前3”.
-metadata: {"version":"0.9.1","author":"0xXIAOc","openclaw":{"requires":{"bins":["node"]},"emoji":"📊","homepage":"https://github.com/0xXIAOc/alpha-radar-openclaw-skill"}}
+description: Use this skill when the user asks to generate a Binance daily market report, BSC/Base/Solana report, global report, Watchlist Delta Report, Alpha Radar report, token report, risk alert report, smart money appendix, or Binance Square preview. Trigger strongly on Chinese requests like “生成今日日报”, “按 Alpha Radar 模板生成日报”, “生成全网 watchlist”, “生成风险警报”, “生成 Binance Square 预览”, “只预览不发广场”, “给我一个短版”, “给我一个 TG 版”, “查询ROBO的信息”, “查询代币ROBO”, “查一下ROBO”, “ROBO怎么样”, “全网广场版前3”.
+metadata: {"version":"1.0.0","author":"0xXIAOc","openclaw":{"requires":{"bins":["node"]},"emoji":"📊","homepage":"https://github.com/0xXIAOc/alpha-radar-openclaw-skill"}}
 homepage: https://github.com/0xXIAOc/alpha-radar-openclaw-skill
 user-invocable: true
 ---
 
-# Alpha Radar Report v5.1
+# Alpha Radar Report v1.0
 
 ## Default behavior
 
@@ -32,8 +32,9 @@ Meaning:
 
 - `solana`: only Solana
 - `bsc`: only BSC
-- `auto`: compare Solana and BSC first, then merge into one report
-- `global`: use all available chains from upstream Binance skills, then output one merged report
+- `base`: only Base
+- `auto`: compare Solana / BSC / Base first, then merge into one report
+- `global`: use all available supported chains from upstream Binance skills, then output one merged report
 
 If the user does not specify a chain, prefer `auto`.
 
@@ -73,6 +74,7 @@ Interpret these naturally:
 - `自动` = `scope=auto`
 - `solana` / `索拉纳` = `scope=solana`
 - `bsc` = `scope=bsc`
+- `base` = `scope=base`
 
 ### 模式
 - `预览` / `短版` / `TG版` = `mode=tg`
@@ -87,6 +89,12 @@ Interpret these naturally:
 ### 钱包
 - `钱包开` / `看钱包` = `wallet=on`
 - `钱包关` / `不看钱包` = `wallet=off`
+
+### 显示模块
+- `现货开` / `现货关`
+- `热度开` / `热度关`
+- `钱包热度开` / `钱包热度关`
+- `meme开` / `meme关`
 
 ### 数量
 - `前3` = `top=3`
@@ -112,14 +120,15 @@ It has two major modes:
 
 ### 1. Market mode
 Outputs:
-1. 今日市场主线
-2. 市场榜单快照
-3. 现货观察
-4. 合约温度
-5. Meme 雷达
-6. 风险警报
-7. 聪明钱附录
-8. 今日结论
+1. 主线一句话
+2. 现货涨幅前三
+3. 现货跌幅前三
+4. 交易所热度前三
+5. 钱包热度前三
+6. Meme 雷达
+7. 值得看 Top
+8. 风险
+9. 结论
 
 ### 2. Token mode
 Outputs:
@@ -139,6 +148,7 @@ The short slash command for this skill should be:
 Examples:
 - `/alpha`
 - `/alpha 全网`
+- `/alpha base`
 - `/alpha 代币=ROBO`
 - `/alpha 广场版 前3`
 - `/alpha 全网 广场版 署名关 不再询问`
@@ -153,6 +163,7 @@ This skill should also be considered during normal Chinese chat requests such as
 - `ROBO怎么样`
 - `全网广场版前3`
 - `BSC 谨慎 钱包关`
+- `Base 热度前三`
 
 If the user provides enough information in a normal message, do not force them to restate it as a slash command.
 
@@ -168,15 +179,38 @@ If the command is bare `/alpha`, run the default workflow immediately.
 
 Before writing any report, you MUST attempt to use these upstream skills when they are available in the environment:
 
-1. `crypto-market-rank`
-2. `query-token-info`
-3. `trading-signal`
-4. `query-token-audit`
+1. `spot`
+2. `crypto-market-rank`
+3. `query-token-info`
+4. `trading-signal`
+5. `query-token-audit`
 
 Optional enrichment:
-5. `query-address-info`
-6. `spot`
-7. `square-post`
+6. `query-address-info`
+7. `meme-rush`
+8. `square-post`
+
+## Core feature mapping
+
+Use upstream skills like this:
+
+- `spot`
+  - 现货涨幅前三
+  - 现货跌幅前三
+
+- `crypto-market-rank`
+  - 交易所热度前三
+  - 钱包热度前三（Smart Money Inflow）
+  - Trending / Top Search / Social Hype
+
+- `query-token-info + query-token-audit + trading-signal`
+  - 指定代币体检卡
+
+- `meme-rush`
+  - Meme 雷达
+
+- `square-post`
+  - Binance Square 发文
 
 ## TG mode rules
 
@@ -186,30 +220,16 @@ Prefer this structure:
 
 - 标题
 - 主线一句话
-- 涨幅前三
-- 跌幅前三
+- 现货涨幅前三
+- 现货跌幅前三
 - 交易所热度前三
 - 钱包热度前三
-- 现货观察
-- 合约温度
 - Meme 雷达
+- 值得看 Top
 - 风险
-- 结论
+- 一句话结论
 
-Avoid long “解释型段落” unless the user explicitly asks for the long version.
-
-Do not append “如果你要，我下一条可以继续……” unless the user asks for follow-up options.
-
-## Market mode emphasis
-
-For `market` mode, prioritize:
-
-1. 现货
-2. meme
-3. smart money
-4. 合约温度（仅温度判断，不伪装成完整合约面板）
-
-If futures-specific data is unavailable, describe it as “合约温度 / 短线环境判断”, not as a complete futures monitor.
+Do not append “如果你要，我下一条可以继续……” unless the user explicitly asks for follow-ups.
 
 ## Non-negotiable execution policy
 
@@ -226,6 +246,7 @@ If futures-specific data is unavailable, describe it as “合约温度 / 短线
 
 If fallback is necessary, use this wording style:
 
+- 本轮未成功调用 `spot`
 - 本轮未成功调用 `crypto-market-rank`
 - 本轮未成功调用 `trading-signal`
 - 本轮未成功调用 `query-token-audit`
@@ -249,7 +270,7 @@ When `mode=square` and the user asks to generate or publish a Square draft:
 ### Step 1: Read request scope
 Infer or read:
 - `queryType`: `market` or `token`
-- `scope`: `solana | bsc | auto | global`
+- `scope`: `solana | bsc | base | auto | global`
 - `window`: default `24h`
 - `mode`: `tg | report | square`
 - `preferences`:
@@ -259,6 +280,10 @@ Infer or read:
   - `lang`
   - `wallet`
   - `preview`
+  - `showSpotLeaderboards`
+  - `showExchangeHot`
+  - `showWalletHot`
+  - `showMemeRadar`
   - `squareDisclosureEnabled`
   - `squareDisclosureAskEveryTime`
 - token fields if present:
@@ -269,13 +294,14 @@ Infer or read:
 ### Step 2: Run upstream Binance skill calls
 Use the required upstream skills in this order:
 
-1. `crypto-market-rank`
-2. `query-token-info`
-3. `trading-signal`
-4. `query-token-audit`
-5. `query-address-info`
-6. `spot`
-7. `square-post`
+1. `spot`
+2. `crypto-market-rank`
+3. `query-token-info`
+4. `trading-signal`
+5. `query-token-audit`
+6. `query-address-info`
+7. `meme-rush`
+8. `square-post`
 
 ### Step 3: Build normalized report data
 
@@ -291,9 +317,8 @@ For market mode include:
 - `generatedAt`
 - `upstreamCalls`
 - `marketTheme`
+- `spotLeaderboards`
 - `leaderboards`
-- `spotFocus`
-- `futuresTemperature`
 - `memeRadar`
 - `watchlist`
 - `riskAlerts`
@@ -351,9 +376,13 @@ In `square` mode:
 - Do not output verbose engineering wording
 - Prefer a directly postable format:
   - 标题
-  - 主线 / 代币结论
-  - 涨幅前三 / 跌幅前三 / 热度前三（如有）
-  - Top 3 或代币看点
+  - 主线
+  - 现货涨幅前三
+  - 现货跌幅前三
+  - 交易所热度前三
+  - 钱包热度前三
+  - Meme 雷达（如有）
+  - Top 3
   - 风险
   - 结论
   - DYOR
