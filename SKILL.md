@@ -360,6 +360,7 @@ For market mode include:
 - `spotLeaderboards`
 - `leaderboards`
 - `memeRadar`
+- futuresSentiment`
 - `watchlist`
 - `riskAlerts`
 - `walletAppendix`
