@@ -195,6 +195,11 @@ function parseNaturalCommand(raw) {
 
   const text = String(raw).trim();
 
+  if (/(^|\s)(帮助|功能)(\s|$)/.test(text)) result.queryType = 'help';
+  if (/Alpha\s*有哪.*功能/i.test(text)) result.queryType = 'help';
+  if (/怎么用\s*alpha/i.test(text)) result.queryType = 'help';
+  if (/alpha怎么用/i.test(text)) result.queryType = 'help';
+
   if (/(^|\s)(全网)(\s|$)/.test(text)) result.scope = 'global';
   if (/(^|\s)(自动)(\s|$)/.test(text)) result.scope = 'auto';
   if (/(^|\s)(solana|索拉纳)(\s|$)/i.test(text)) result.scope = 'solana';
@@ -267,6 +272,36 @@ function parseNaturalCommand(raw) {
   return result;
 }
 
+function defaultHelpCards() {
+  return [
+    {
+      title: '全网速览',
+      description: '看全网 24h 主线、现货涨跌榜、热度榜、钱包热度和 Meme 雷达。',
+      examples: ['/alpha 全网', '/alpha global']
+    },
+    {
+      title: '分链速览',
+      description: '看 Solana / BSC / Base 单链视角。',
+      examples: ['/alpha base', '/alpha bsc', '/alpha solana']
+    },
+    {
+      title: '指定代币体检',
+      description: '查某个币的价格、流动性、风险、信号与结论。',
+      examples: ['/alpha 代币=ROBO', '查询ROBO的信息']
+    },
+    {
+      title: '广场文案',
+      description: '生成可直接发 Binance Square 的文案草稿。',
+      examples: ['/alpha 全网 广场版 前3', '/alpha 全网 广场版 署名开 不再询问']
+    },
+    {
+      title: '偏好设置',
+      description: '控制显示模块和风格偏好。',
+      examples: ['谨慎', '钱包关', '现货关', '热度开', 'meme开']
+    }
+  ];
+}
+
 function normalizeData(raw, args = {}) {
   const validated = validateReportData(raw);
   const aliasArgs = parseNaturalCommand(args.command || '');
@@ -282,7 +317,9 @@ function normalizeData(raw, args = {}) {
 
   const token = mergedArgs.token || validated.tokenQuery?.token || validated.tokenQuery?.symbol;
   const contract = mergedArgs.contract || validated.tokenQuery?.contractAddress;
-  const queryType = mergedArgs.queryType || (token || contract ? 'token' : validated.queryType || 'market');
+  const queryType =
+    mergedArgs.queryType ||
+    (token || contract ? 'token' : validated.queryType || 'market');
 
   const merged = {
     ...validated,
@@ -313,7 +350,8 @@ function normalizeData(raw, args = {}) {
       ...(mergedArgs.showMeme !== undefined ? { showMemeRadar: normalizeBoolean(mergedArgs.showMeme, validated.preferences?.showMemeRadar !== false) } : {}),
       ...(mergedArgs.disclosure !== undefined ? { squareDisclosureEnabled: normalizeBoolean(mergedArgs.disclosure, validated.preferences?.squareDisclosureEnabled === true) } : {}),
       ...(mergedArgs.askDisclosure !== undefined ? { squareDisclosureAskEveryTime: normalizeBoolean(mergedArgs.askDisclosure, validated.preferences?.squareDisclosureAskEveryTime !== false) } : {})
-    }
+    },
+    helpCards: validated.helpCards && validated.helpCards.length > 0 ? validated.helpCards : defaultHelpCards()
   };
 
   return validateReportData(merged);
