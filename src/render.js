@@ -138,6 +138,43 @@ function renderMemeRadarBlock(memeRadar = {}) {
   return lines;
 }
 
+function renderHelp(data) {
+  const lines = [];
+
+  lines.push('📊 Alpha 可用功能');
+  lines.push('');
+  lines.push('你可以这样用：');
+  lines.push('');
+
+  ensureArray(data.helpCards).forEach((card, idx) => {
+    lines.push(`${idx + 1}. ${card.title}`);
+    lines.push(`   ${card.description}`);
+    ensureArray(card.examples).forEach((example) => {
+      lines.push(`   - ${example}`);
+    });
+    lines.push('');
+  });
+
+  lines.push('可调偏好：');
+  lines.push('- 谨慎 / 均衡 / 激进');
+  lines.push('- 钱包开 / 钱包关');
+  lines.push('- 现货开 / 现货关');
+  lines.push('- 热度开 / 热度关');
+  lines.push('- 钱包热度开 / 钱包热度关');
+  lines.push('- meme开 / meme关');
+  lines.push('- 署名开 / 署名关');
+  lines.push('- 每次询问 / 不再询问');
+  lines.push('');
+  lines.push('快速开始：');
+  lines.push('- /alpha 全网');
+  lines.push('- /alpha base');
+  lines.push('- /alpha 代币=ROBO');
+  lines.push('- /alpha 全网 广场版 前3');
+  lines.push('- 查询ROBO的信息');
+
+  return `${lines.join('\n').trim()}\n`;
+}
+
 function renderMarketTg(data) {
   const lines = [];
   const label = scopeLabel(data);
@@ -147,25 +184,20 @@ function renderMarketTg(data) {
   lines.push(`📊 Alpha Radar｜${label} ${stringValue(data.window, '24h')} 预览`);
   lines.push(`主线一句话：${stringValue(data.marketTheme.summary, '数据不足，暂不下结论。')}`);
 
-  const spotGainers = data.preferences?.showSpotLeaderboards === false
-    ? []
-    : renderSimpleList('现货涨幅前三', data.spotLeaderboards?.gainersTop3, '涨幅');
+  const spotGainers =
+    data.preferences?.showSpotLeaderboards === false ? [] : renderSimpleList('现货涨幅前三', data.spotLeaderboards?.gainersTop3, '涨幅');
 
-  const spotLosers = data.preferences?.showSpotLeaderboards === false
-    ? []
-    : renderSimpleList('现货跌幅前三', data.spotLeaderboards?.losersTop3, '跌幅');
+  const spotLosers =
+    data.preferences?.showSpotLeaderboards === false ? [] : renderSimpleList('现货跌幅前三', data.spotLeaderboards?.losersTop3, '跌幅');
 
-  const exchangeHot = data.preferences?.showExchangeHot === false
-    ? []
-    : renderSimpleList('交易所热度前三', data.leaderboards?.exchangeHotTop3, '热度');
+  const exchangeHot =
+    data.preferences?.showExchangeHot === false ? [] : renderSimpleList('交易所热度前三', data.leaderboards?.exchangeHotTop3, '热度');
 
-  const walletHot = data.preferences?.showWalletHot === false
-    ? []
-    : renderSimpleList('钱包热度前三', data.leaderboards?.walletHotTop3, '热度');
+  const walletHot =
+    data.preferences?.showWalletHot === false ? [] : renderSimpleList('钱包热度前三', data.leaderboards?.walletHotTop3, '热度');
 
-  const memeRadar = data.preferences?.showMemeRadar === false
-    ? []
-    : renderMemeRadarBlock(data.memeRadar || {});
+  const memeRadar =
+    data.preferences?.showMemeRadar === false ? [] : renderMemeRadarBlock(data.memeRadar || {});
 
   if (spotGainers.length) {
     lines.push('');
@@ -272,6 +304,10 @@ function renderTokenTg(data) {
 }
 
 function renderReport(data) {
+  if (data.queryType === 'help') {
+    return renderHelp(data);
+  }
+
   const label = scopeLabel(data);
   const sorted = sortWatchlist(data.watchlist);
   const lines = [];
@@ -296,7 +332,7 @@ function renderReport(data) {
   }
 
   lines.push(`# ${data.title || `Alpha Radar | ${label} | ${stringValue(data.window, '24h')}`}`);
-  lines.push(`生成时间：${data.generatedAt || ''}`);
+  if (data.generatedAt) lines.push(`生成时间：${data.generatedAt}`);
   lines.push(`范围：${label}`);
   lines.push('');
 
@@ -305,27 +341,39 @@ function renderReport(data) {
   lines.push('');
 
   lines.push('## 现货涨幅前三');
-  renderSimpleList('', data.spotLeaderboards?.gainersTop3, '涨幅')
-    .filter(Boolean)
-    .forEach((line) => lines.push(line.replace(/：$/, '')));
+  const gainers = renderSimpleList('', data.spotLeaderboards?.gainersTop3, '涨幅');
+  if (gainers.length === 0) {
+    lines.push('暂无数据');
+  } else {
+    gainers.slice(1).forEach((line) => lines.push(line));
+  }
   lines.push('');
 
   lines.push('## 现货跌幅前三');
-  renderSimpleList('', data.spotLeaderboards?.losersTop3, '跌幅')
-    .filter(Boolean)
-    .forEach((line) => lines.push(line.replace(/：$/, '')));
+  const losers = renderSimpleList('', data.spotLeaderboards?.losersTop3, '跌幅');
+  if (losers.length === 0) {
+    lines.push('暂无数据');
+  } else {
+    losers.slice(1).forEach((line) => lines.push(line));
+  }
   lines.push('');
 
   lines.push('## 交易所热度前三');
-  renderSimpleList('', data.leaderboards?.exchangeHotTop3, '热度')
-    .filter(Boolean)
-    .forEach((line) => lines.push(line.replace(/：$/, '')));
+  const exchangeHot = renderSimpleList('', data.leaderboards?.exchangeHotTop3, '热度');
+  if (exchangeHot.length === 0) {
+    lines.push('暂无数据');
+  } else {
+    exchangeHot.slice(1).forEach((line) => lines.push(line));
+  }
   lines.push('');
 
   lines.push('## 钱包热度前三');
-  renderSimpleList('', data.leaderboards?.walletHotTop3, '热度')
-    .filter(Boolean)
-    .forEach((line) => lines.push(line.replace(/：$/, '')));
+  const walletHot = renderSimpleList('', data.leaderboards?.walletHotTop3, '热度');
+  if (walletHot.length === 0) {
+    lines.push('暂无数据');
+  } else {
+    walletHot.slice(1).forEach((line) => lines.push(line));
+  }
   lines.push('');
 
   lines.push('## Meme 雷达');
@@ -385,6 +433,10 @@ function renderSquare(data) {
     lines.push('');
   }
 
+  if (data.queryType === 'help') {
+    return renderHelp(data);
+  }
+
   if (data.queryType === 'token') {
     const token = getPrimaryToken(data);
     const symbol = token.symbol || token.name || '未知代币';
@@ -410,11 +462,11 @@ function renderSquare(data) {
   lines.push('');
   lines.push(`主线：${stringValue(data.marketTheme.summary, '今日主线暂不明确。')}`);
 
-  const spotGainers = renderSimpleList('现货涨幅前三', data.spotLeaderboards?.gainersTop3, '涨幅');
-  const spotLosers = renderSimpleList('现货跌幅前三', data.spotLeaderboards?.losersTop3, '跌幅');
-  const exchangeHot = renderSimpleList('交易所热度前三', data.leaderboards?.exchangeHotTop3, '热度');
-  const walletHot = renderSimpleList('钱包热度前三', data.leaderboards?.walletHotTop3, '热度');
-  const memeRadar = renderMemeRadarBlock(data.memeRadar || {});
+  const spotGainers = data.preferences?.showSpotLeaderboards === false ? [] : renderSimpleList('现货涨幅前三', data.spotLeaderboards?.gainersTop3, '涨幅');
+  const spotLosers = data.preferences?.showSpotLeaderboards === false ? [] : renderSimpleList('现货跌幅前三', data.spotLeaderboards?.losersTop3, '跌幅');
+  const exchangeHot = data.preferences?.showExchangeHot === false ? [] : renderSimpleList('交易所热度前三', data.leaderboards?.exchangeHotTop3, '热度');
+  const walletHot = data.preferences?.showWalletHot === false ? [] : renderSimpleList('钱包热度前三', data.leaderboards?.walletHotTop3, '热度');
+  const memeRadar = data.preferences?.showMemeRadar === false ? [] : renderMemeRadarBlock(data.memeRadar || {});
 
   if (spotGainers.length) {
     lines.push('');
@@ -472,6 +524,7 @@ function renderSquare(data) {
 }
 
 function renderTg(data) {
+  if (data.queryType === 'help') return renderHelp(data);
   if (data.queryType === 'token') return renderTokenTg(data);
   return renderMarketTg(data);
 }
@@ -480,6 +533,7 @@ module.exports = {
   renderTg,
   renderReport,
   renderSquare,
+  renderHelp,
   formatMetrics,
   stringValue,
   scopeLabel
