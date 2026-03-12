@@ -7,13 +7,14 @@ const { validateReportData } = require('../src/schema');
 const { renderTg, renderReport, renderSquare } = require('../src/render');
 const { parseNaturalCommand, normalizeData } = require('../scripts/render-report');
 
-test('validateReportData accepts final payload shape with base support', () => {
+test('validateReportData accepts final payload shape with alpha and futures extensions', () => {
   const result = validateReportData(sample);
   assert.equal(result.queryType, 'market');
   assert.equal(result.preferences.squareDisclosureEnabled, true);
-  assert.equal(result.preferences.showSpotLeaderboards, true);
   assert.equal(result.preferences.showFuturesSentiment, true);
-  assert.ok(result.selectedChains.includes('Base'));
+  assert.equal(result.fearGreedIndex.value, 27);
+  assert.equal(result.alphaLeaderboards.volumeTop3.length, 3);
+  assert.equal(result.futuresLeaderboards.fundingTop3.length, 3);
 });
 
 test('parseNaturalCommand understands help mode', () => {
@@ -22,15 +23,13 @@ test('parseNaturalCommand understands help mode', () => {
 });
 
 test('parseNaturalCommand understands base alias and module toggles', () => {
-  const result = parseNaturalCommand('Base 广场版 前3 署名开 不再询问 现货关 热度开 钱包热度关 meme开 衍生品关');
+  const result = parseNaturalCommand('Base 广场版 前3 署名开 不再询问 现货关 meme开 衍生品关');
   assert.equal(result.scope, 'base');
   assert.equal(result.style, 'square');
   assert.equal(result.top, '3');
   assert.equal(result.disclosure, 'true');
   assert.equal(result.askDisclosure, 'false');
   assert.equal(result.showSpot, 'false');
-  assert.equal(result.showExchangeHot, 'true');
-  assert.equal(result.showWalletHot, 'false');
   assert.equal(result.showMeme, 'true');
   assert.equal(result.showFutures, 'false');
 });
@@ -49,31 +48,47 @@ test('normalizeData maps futures toggle from natural command', () => {
   assert.equal(result.preferences.showFuturesSentiment, false);
 });
 
-test('renderTg includes spot and hot leaderboards and meme radar', () => {
+test('renderTg includes fear greed, alpha leaderboards, futures leaderboards and meme radar', () => {
   const output = renderTg(validateReportData(sample));
-  assert.match(output, /现货涨幅前三/);
-  assert.match(output, /现货跌幅前三/);
-  assert.match(output, /交易所热度前三/);
-  assert.match(output, /钱包热度前三/);
-  assert.match(output, /Meme 雷达/);
+  assert.match(output, /加密货币恐惧和贪婪指数：27（恐惧）/);
+  assert.match(output, /Alpha 24h 成交量前 3/);
+  assert.match(output, /Alpha 24h 成交量前 3（未上 U 本位合约）/);
+  assert.match(output, /U 本位当前资金费最高 TOP 1/);
+  assert.match(output, /U 本位当前资金费最高 TOP 3/);
+  assert.match(output, /U 本位合约 24h 涨幅 TOP 3 \+ 对应资金费率/);
   assert.match(output, /衍生品情绪：/);
+  assert.match(output, /Meme 雷达：/);
+});
+
+test('renderTg does not render exchange or wallet hot sections anymore', () => {
+  const output = renderTg(validateReportData(sample));
+  assert.doesNotMatch(output, /交易所热度前三/);
+  assert.doesNotMatch(output, /钱包热度前三/);
 });
 
 test('renderTg watchlist line includes source flags and risk tags', () => {
   const output = renderTg(validateReportData(sample));
   assert.match(output, /来源：spot/);
-  assert.match(output, /标签：高波动；集中度偏高；回撤风险/);
+  assert.match(output, /标签：高资金费率；高弹性；追高风险/);
 });
 
-test('renderReport includes trader sections and metrics table', () => {
+test('renderReport includes fear greed, alpha sections and futures sections', () => {
   const output = renderReport(validateReportData(sample));
-  assert.match(output, /## 现货涨幅前三/);
-  assert.match(output, /## 现货跌幅前三/);
-  assert.match(output, /## 交易所热度前三/);
-  assert.match(output, /## 钱包热度前三/);
-  assert.match(output, /## Meme 雷达/);
+  assert.match(output, /## 加密货币恐惧和贪婪指数/);
+  assert.match(output, /## Alpha 24h 成交量前 3/);
+  assert.match(output, /## Alpha 24h 成交量前 3（未上 U 本位合约）/);
+  assert.match(output, /## U 本位当前资金费最高 TOP 1/);
+  assert.match(output, /## U 本位当前资金费最高 TOP 3/);
+  assert.match(output, /## U 本位合约 24h 涨幅 TOP 3 \+ 对应资金费率/);
   assert.match(output, /## 衍生品情绪/);
+  assert.match(output, /## Meme 雷达/);
   assert.match(output, /\| 指标 \| 数值 \|/);
+});
+
+test('renderReport no longer renders exchange and wallet hot sections', () => {
+  const output = renderReport(validateReportData(sample));
+  assert.doesNotMatch(output, /## 交易所热度前三/);
+  assert.doesNotMatch(output, /## 钱包热度前三/);
 });
 
 test('renderReport hides futures block when toggle is off', () => {
@@ -83,16 +98,20 @@ test('renderReport hides futures block when toggle is off', () => {
       preferences: { ...sample.preferences, showFuturesSentiment: false }
     })
   );
+  assert.doesNotMatch(output, /## U 本位当前资金费最高 TOP 1/);
+  assert.doesNotMatch(output, /## U 本位当前资金费最高 TOP 3/);
+  assert.doesNotMatch(output, /## U 本位合约 24h 涨幅 TOP 3 \+ 对应资金费率/);
   assert.doesNotMatch(output, /## 衍生品情绪/);
 });
 
-test('renderSquare supports disclosure line', () => {
+test('renderSquare supports disclosure line and new market sections', () => {
   const output = renderSquare(
     validateReportData({ ...sample, preferences: { ...sample.preferences, squareDisclosureEnabled: true } })
   );
   assert.match(output, /本文由OpenClaw发出/);
-  assert.match(output, /现货涨幅前三/);
-  assert.match(output, /交易所热度前三/);
+  assert.match(output, /加密货币恐惧和贪婪指数：27（恐惧）/);
+  assert.match(output, /Alpha 24h 成交量前 3/);
+  assert.match(output, /U 本位当前资金费最高 TOP 1/);
 });
 
 test('render help mode works with explicit helpCards', () => {
@@ -116,7 +135,7 @@ test('render help mode works with explicit helpCards', () => {
 test('render help mode falls back when helpCards is empty', () => {
   const output = renderTg(validateReportData({ ...sample, queryType: 'help', helpCards: [] }));
   assert.match(output, /Alpha 可用功能/);
-  assert.match(output, /全网速览/);
+  assert.match(output, /衍生品开 \/ 衍生品关/);
 });
 
 test('render token card works for Base token with compact metrics in square', () => {
@@ -136,8 +155,8 @@ test('render token card works for Base token with compact metrics in square', ()
       wallet: true,
       preview: true,
       showSpotLeaderboards: true,
-      showExchangeHot: true,
-      showWalletHot: true,
+      showExchangeHot: false,
+      showWalletHot: false,
       showMemeRadar: true,
       showFuturesSentiment: true,
       squareDisclosureEnabled: false,
@@ -151,8 +170,11 @@ test('render token card works for Base token with compact metrics in square', ()
       { skill: 'trading-signal', status: 'ok' },
       { skill: 'query-token-audit', status: 'ok' }
     ],
+    fearGreedIndex: {},
     marketTheme: {},
     spotLeaderboards: { gainersTop3: [], losersTop3: [] },
+    alphaLeaderboards: { volumeTop3: [], volumeTop3NoUsdsFutures: [] },
+    futuresLeaderboards: { fundingTop3: [], gainersTop3WithFunding: [] },
     leaderboards: { exchangeHotTop3: [], walletHotTop3: [] },
     memeRadar: { summary: '', top3: [] },
     futuresSentiment: { summary: '', panels: [] },
@@ -226,7 +248,9 @@ test('renderTg still shows spot sections when spot call fails', () => {
       ...sample,
       upstreamCalls: [
         { skill: 'spot', status: 'failed', message: 'mock fail' },
-        { skill: 'crypto-market-rank', status: 'ok' },
+        { skill: 'alpha', status: 'ok' },
+        { skill: 'derivatives-trading-usds-futures', status: 'ok' },
+        { skill: 'meme-rush', status: 'ok' },
         { skill: 'query-token-info', status: 'ok' },
         { skill: 'trading-signal', status: 'ok' },
         { skill: 'query-token-audit', status: 'ok' }
@@ -239,22 +263,21 @@ test('renderTg still shows spot sections when spot call fails', () => {
   assert.match(output, /现货跌幅前三/);
 });
 
-test('renderSquare still shows spot sections when spot call fails', () => {
+test('renderSquare still shows alpha section when alpha call fails', () => {
   const output = renderSquare(
     validateReportData({
       ...sample,
       upstreamCalls: [
-        { skill: 'spot', status: 'failed', message: 'mock fail' },
-        { skill: 'crypto-market-rank', status: 'ok' },
-        { skill: 'query-token-info', status: 'ok' },
-        { skill: 'trading-signal', status: 'ok' },
-        { skill: 'query-token-audit', status: 'ok' }
+        { skill: 'spot', status: 'ok' },
+        { skill: 'alpha', status: 'failed', message: 'mock fail' },
+        { skill: 'derivatives-trading-usds-futures', status: 'ok' },
+        { skill: 'meme-rush', status: 'ok' }
       ],
-      spotLeaderboards: { gainersTop3: [], losersTop3: [] }
+      alphaLeaderboards: { volumeTop3: [], volumeTop3NoUsdsFutures: [] }
     })
   );
-  assert.match(output, /现货涨幅前三/);
-  assert.match(output, /本轮未成功调用 `spot`/);
+  assert.match(output, /Alpha 24h 成交量前 3/);
+  assert.match(output, /本轮未成功调用 `alpha`/);
 });
 
 test('renderFuturesPanel shows open interest value in outputs', () => {
