@@ -1,10 +1,14 @@
 {
-  "title": "",
+  "title": "Alpha Radar | Global | 24h",
   "queryType": "market",
   "tokenQuery": {},
-  "mode": "tg",
+  "mode": "report",
   "chainScope": "global",
-  "selectedChains": ["Solana", "BSC", "Base"],
+  "selectedChains": [
+    "Solana",
+    "BSC",
+    "Base"
+  ],
   "previewOnly": true,
   "preferences": {
     "profile": "balanced",
@@ -17,192 +21,318 @@
     "showExchangeHot": true,
     "showWalletHot": true,
     "showMemeRadar": true,
-    "squareDisclosureEnabled": false,
-    "squareDisclosureAskEveryTime": true
+    "squareDisclosureEnabled": true,
+    "squareDisclosureAskEveryTime": false
   },
   "chain": "Global",
   "window": "24h",
-  "generatedAt": "2026-03-11T20:00:00Z",
+  "generatedAt": "2026-03-12T09:00:00.000Z",
   "upstreamCalls": [
-    { "skill": "spot", "status": "ok" },
-    { "skill": "crypto-market-rank", "status": "ok" },
-    { "skill": "query-token-info", "status": "ok" },
-    { "skill": "trading-signal", "status": "partial", "message": "部分信号为 timeout" },
-    { "skill": "query-token-audit", "status": "ok" },
-    { "skill": "query-address-info", "status": "failed", "message": "本轮未拉取钱包明细" },
-    { "skill": "meme-rush", "status": "ok" }
+    {
+      "skill": "spot-public-api",
+      "status": "ok",
+      "message": "Spot 榜单正常"
+    },
+    {
+      "skill": "futures-public-api",
+      "status": "partial",
+      "message": "1 个面板失败"
+    },
+    {
+      "skill": "crypto-market-rank",
+      "status": "ok",
+      "message": "热度榜正常"
+    },
+    {
+      "skill": "meme-rush",
+      "status": "ok",
+      "message": "Meme 雷达正常"
+    },
+    {
+      "skill": "wallet-scan",
+      "status": "failed",
+      "message": "钱包补充数据部分缺失"
+    }
   ],
   "marketTheme": {
-    "summary": "今天全网主线不是单边上涨，而是现货热度、钱包热度与 meme 流量在 Solana / BSC / Base 三条链之间分化。",
+    "summary": "高弹性 meme 与强叙事基础设施继续吸走流动性，短线仍偏题材驱动。",
     "signals": [
-      "Solana 更偏高弹性情绪盘",
-      "BSC 更偏结构和成交确认",
-      "Base 适合继续跟踪叙事和热度演化"
+      "Base 链新币活跃，成交集中在 3-5 个高弹性标的",
+      "Solana 链老热点回流，追高风险也同步抬升",
+      "衍生品情绪偏多，但并非所有面板共振"
     ],
     "stance": "观察确认"
   },
   "spotLeaderboards": {
     "gainersTop3": [
-      { "symbol": "Distorted", "chain": "Solana", "metricLabel": "涨幅", "metricValue": "+1238%" },
-      { "symbol": "ROBO", "chain": "BSC", "metricLabel": "涨幅", "metricValue": "+188%" },
-      { "symbol": "BASEX", "chain": "Base", "metricLabel": "涨幅", "metricValue": "+72%" }
+      {
+        "symbol": "ROBO",
+        "chain": "Spot",
+        "metricLabel": "涨幅",
+        "metricValue": "+126.4%",
+        "note": "24h成交 82,000,000 USDT"
+      },
+      {
+        "symbol": "CLOW",
+        "chain": "Spot",
+        "metricLabel": "涨幅",
+        "metricValue": "+71.2%",
+        "note": "24h成交 41,000,000 USDT"
+      },
+      {
+        "symbol": "BASEX",
+        "chain": "Spot",
+        "metricLabel": "涨幅",
+        "metricValue": "+54.8%",
+        "note": "24h成交 37,000,000 USDT"
+      }
     ],
     "losersTop3": [
-      { "symbol": "JUP", "chain": "Solana", "metricLabel": "跌幅", "metricValue": "-4.18%" },
-      { "symbol": "OLDX", "chain": "BSC", "metricLabel": "跌幅", "metricValue": "-8.41%" },
-      { "symbol": "BASEOLD", "chain": "Base", "metricLabel": "跌幅", "metricValue": "-10.3%" }
+      {
+        "symbol": "OLDX",
+        "chain": "Spot",
+        "metricLabel": "跌幅",
+        "metricValue": "-22.3%",
+        "note": "24h成交 9,000,000 USDT"
+      },
+      {
+        "symbol": "SLOW",
+        "chain": "Spot",
+        "metricLabel": "跌幅",
+        "metricValue": "-18.1%",
+        "note": "24h成交 6,400,000 USDT"
+      },
+      {
+        "symbol": "FOMO",
+        "chain": "Spot",
+        "metricLabel": "跌幅",
+        "metricValue": "-14.4%",
+        "note": "24h成交 12,100,000 USDT"
+      }
     ]
   },
   "leaderboards": {
     "exchangeHotTop3": [
-      { "symbol": "PUMP", "chain": "Solana", "metricLabel": "热度", "metricValue": "91" },
-      { "symbol": "CAKE", "chain": "BSC", "metricLabel": "热度", "metricValue": "84" },
-      { "symbol": "AERO", "chain": "Base", "metricLabel": "热度", "metricValue": "79" }
+      {
+        "symbol": "ROBO",
+        "chain": "Base",
+        "metricLabel": "热度",
+        "metricValue": "98",
+        "note": "新增交易对拉动热度"
+      },
+      {
+        "symbol": "AURA",
+        "chain": "Solana",
+        "metricLabel": "热度",
+        "metricValue": "91",
+        "note": "链上讨论量上升"
+      },
+      {
+        "symbol": "CLOW",
+        "chain": "BSC",
+        "metricLabel": "热度",
+        "metricValue": "88",
+        "note": "Binance 广场讨论偏多"
+      }
     ],
     "walletHotTop3": [
-      { "symbol": "CAKE", "chain": "BSC", "metricLabel": "热度", "metricValue": "smart money active" },
-      { "symbol": "Distorted", "chain": "Solana", "metricLabel": "热度", "metricValue": "wallet attention" },
-      { "symbol": "AERO", "chain": "Base", "metricLabel": "热度", "metricValue": "wallet watch" }
+      {
+        "symbol": "ROBO",
+        "chain": "Base",
+        "metricLabel": "热度",
+        "metricValue": "93",
+        "note": "聪明钱净流入"
+      },
+      {
+        "symbol": "AURA",
+        "chain": "Solana",
+        "metricLabel": "热度",
+        "metricValue": "90",
+        "note": "高质量地址持续观察"
+      },
+      {
+        "symbol": "BASEX",
+        "chain": "Base",
+        "metricLabel": "热度",
+        "metricValue": "84",
+        "note": "回补加仓明显"
+      }
     ]
   },
   "memeRadar": {
-    "summary": "Meme 仍是今天流量和弹性的核心来源，但高热不等于高确定性。",
+    "summary": "Meme 仍是今天流量和弹性的核心来源，但分化开始加剧。",
     "top3": [
-      { "symbol": "龙虾", "chain": "BSC", "reason": "高弹性且有链上信号确认" },
-      { "symbol": "Distorted", "chain": "Solana", "reason": "热度、搜索、成交同时爆发" },
-      { "symbol": "BASEX", "chain": "Base", "reason": "Base 侧叙事强，适合观察新资金承接" }
+      {
+        "symbol": "ROBO",
+        "chain": "Base",
+        "reason": "交易量、讨论量和新钱包增量同步上升"
+      },
+      {
+        "symbol": "AURA",
+        "chain": "Solana",
+        "reason": "老热点回流，社媒扩散快"
+      },
+      {
+        "symbol": "CLOW",
+        "chain": "BSC",
+        "reason": "情绪极端，弹性高但回撤同样大"
+      }
+    ]
+  },
+  "futuresSentiment": {
+    "summary": "衍生品情绪整体偏多，但还没有形成全面共振。",
+    "panels": [
+      {
+        "symbol": "BTCUSDT",
+        "globalLongShortRatio": 1.03,
+        "topLongShortRatio": 1.22,
+        "openInterestValue": "386545621",
+        "openInterestChangePct": 3.21,
+        "fundingRate": 0.000112,
+        "takerBuySellRatio": 1.08,
+        "stance": "多头偏强"
+      },
+      {
+        "symbol": "ETHUSDT",
+        "globalLongShortRatio": 0.98,
+        "topLongShortRatio": 1.15,
+        "openInterestValue": "210033120",
+        "openInterestChangePct": 1.44,
+        "fundingRate": 8.9e-05,
+        "takerBuySellRatio": 1.03,
+        "stance": "大户偏多，散户偏弱"
+      },
+      {
+        "symbol": "SOLUSDT",
+        "globalLongShortRatio": null,
+        "topLongShortRatio": null,
+        "openInterestValue": "",
+        "openInterestChangePct": null,
+        "fundingRate": null,
+        "takerBuySellRatio": null,
+        "stance": "获取失败: rate limited"
+      }
     ]
   },
   "watchlist": [
     {
-      "symbol": "Distorted",
-      "chain": "Solana",
-      "verdict": "观察",
-      "action": "观察",
-      "score": 82,
-      "confidence": "medium",
-      "reason": "热度、搜索与成交同时强，但波动很大，适合高强度跟踪，不适合无风控追高。",
-      "metrics": {
-        "price": "0.0123",
-        "priceChange24h": "+1238%",
-        "volume24h": "9.84M",
-        "liquidity": "0.53M",
-        "marketCap": "2.35M",
-        "holders": 6151,
-        "top10Pct": "28%",
-        "smartMoney": "弱确认 / timeout 混合",
-        "riskLevel": "LOW",
-        "searchCount24h": 402
-      },
-      "risk": "短时涨幅过大，1h/4h 回撤显著，情绪退潮时风险最高。",
-      "next": "观察热度能否继续转化为成交承接，而不是只剩搜索噪音。",
-      "sourceFlags": ["热榜", "热搜", "审计"],
-      "delta": "new"
-    },
-    {
-      "symbol": "CAKE",
-      "chain": "BSC",
-      "verdict": "看",
-      "action": "看",
-      "score": 79,
-      "confidence": "high",
-      "reason": "BSC 里更符合“流动性 + 成交 + 结构”三项共振，适合做研究型交易筛选。",
-      "metrics": {
-        "price": "3.11",
-        "priceChange24h": "+4.6%",
-        "volume24h": "18.4M",
-        "liquidity": "12.7M",
-        "marketCap": "930M",
-        "holders": 365000,
-        "top10Pct": "41.2%",
-        "smartMoney": "buy / active",
-        "riskLevel": "LOW"
-      },
-      "risk": "不是情绪最强票，短线弹性可能弱于 Solana 热搜票。",
-      "next": "观察 smart money 是否继续维持 active buy，以及成交能否持续扩张。",
-      "sourceFlags": ["热榜", "信号", "审计"],
-      "delta": "new"
-    },
-    {
-      "symbol": "AERO",
+      "symbol": "ROBO",
       "chain": "Base",
-      "verdict": "看",
+      "contractAddress": "0x1234567890abcdef",
       "action": "看",
-      "score": 74,
-      "confidence": "medium",
-      "reason": "Base 侧更适合作为叙事跟踪票，热度与资金关注度都有延续空间。",
+      "score": 88,
+      "confidence": "high",
+      "reason": "热度、成交和钱包流入形成共振，是今天最强的高弹性样本。",
       "metrics": {
-        "price": "1.82",
-        "priceChange24h": "+6.3%",
-        "volume24h": "12.2M",
-        "liquidity": "9.4M",
-        "marketCap": "610M",
-        "holders": 148000,
-        "top10Pct": "36.1%",
-        "smartMoney": "active",
-        "riskLevel": "LOW"
+        "price": "$0.028",
+        "priceChange24h": "+126.4%",
+        "volume24h": "$82M",
+        "liquidity": "$7.4M",
+        "holders": "18.2k",
+        "top10Pct": "22%",
+        "smartMoney": "净流入",
+        "riskLevel": "中",
+        "marketCap": "$28M",
+        "searchCount24h": "13.8k"
       },
-      "risk": "更适合观察结构延续，不适合把它当作最高弹性情绪票。",
-      "next": "看 Base 资金是否继续扩张，以及热度是否转化为成交。",
-      "sourceFlags": ["热榜", "钱包热度", "审计"],
-      "delta": "new"
+      "risk": "涨幅过大，若成交断层容易出现剧烈回撤。",
+      "next": "继续看新钱包增量和回调后承接。",
+      "sourceFlags": [
+        "spot",
+        "exchange-hot",
+        "wallet-hot",
+        "meme-radar"
+      ]
+    },
+    {
+      "symbol": "AURA",
+      "chain": "Solana",
+      "action": "继续观察",
+      "score": 81,
+      "confidence": "medium",
+      "reason": "老热点回流明显，但二次启动是否成立还要看高位换手。",
+      "metrics": {
+        "price": "$0.14",
+        "priceChange24h": "+41.2%",
+        "volume24h": "$37M",
+        "liquidity": "$5.2M",
+        "holders": "24.6k",
+        "top10Pct": "18%",
+        "smartMoney": "持续买入",
+        "riskLevel": "中",
+        "marketCap": "$64M",
+        "searchCount24h": "7.9k"
+      },
+      "risk": "如果社媒扩散放缓，容易进入高位横盘。",
+      "next": "看是否能站稳关键成交密集区。",
+      "sourceFlags": [
+        "wallet-hot",
+        "meme-radar"
+      ]
+    },
+    {
+      "symbol": "CLOW",
+      "chain": "BSC",
+      "action": "回避",
+      "score": 53,
+      "confidence": "low",
+      "reason": "情绪很强，但资金结构不稳，冲高回落概率高。",
+      "metrics": {
+        "price": "$0.0048",
+        "priceChange24h": "+71.2%",
+        "volume24h": "$41M",
+        "liquidity": "$2.1M",
+        "holders": "9.1k",
+        "top10Pct": "34%",
+        "smartMoney": "分歧加大",
+        "riskLevel": "高",
+        "marketCap": "$12M",
+        "searchCount24h": "9.8k"
+      },
+      "risk": "筹码集中度偏高，短线波动非常大。",
+      "next": "观察是否出现持续出货迹象。",
+      "sourceFlags": [
+        "spot",
+        "meme-radar"
+      ]
     }
   ],
   "riskAlerts": [
     {
-      "symbol": "TRUMP",
-      "chain": "Solana",
+      "symbol": "CLOW",
+      "chain": "BSC",
       "severity": "high",
       "category": "trading",
-      "reason": "Top10 持仓占比过高，情绪与流动性虽强，但集中度风险明显。",
-      "flags": ["Top10=89.49%", "高集中度", "情绪盘"]
+      "reason": "筹码集中且换手极端，追高性价比差。",
+      "flags": [
+        "高波动",
+        "集中度偏高",
+        "回撤风险"
+      ]
     },
     {
-      "symbol": "Timeout Signals",
-      "chain": "BSC",
+      "symbol": "OLDX",
+      "chain": "Spot",
       "severity": "medium",
       "category": "signal",
-      "reason": "部分 smart money 信号已进入 timeout 或高 exitRate 后段，不能把旧信号当成新机会。",
-      "flags": ["timeout", "exitRate 偏高", "旧信号"]
+      "reason": "热度和成交都在降温，弱势延续概率高。",
+      "flags": [
+        "热度下滑",
+        "流动性下降"
+      ]
     }
   ],
   "walletAppendix": {
-    "summary": "本轮未完整拉取 query-address-info，因此钱包附录仅保留简化说明。",
+    "summary": "钱包附录更适合用来确认题材是否获得持续资金支持。",
     "notes": [
-      "smart money 本轮更适合做过滤条件，而不是单独做多依据",
-      "如果某币同时满足热榜、成交、active buy 与低红灯审计，优先级才应上调"
+      "ROBO 的新增高质量地址数继续上升，但集中在少量钱包。",
+      "AURA 的回流更偏存量资金，后续要看是否有新地址接力。"
     ]
   },
   "conclusion": [
-    "今天全网更适合按链做判断：Solana 看弹性，BSC 看结构，Base 看叙事延续。",
-    "优先关注现货涨跌榜、交易所热度、钱包热度和 Meme 雷达同时共振的币。",
-    "旧信号、薄流动性和高集中度，仍是今天最该回避的三类风险。"
+    "今天最值得盯的是 ROBO 这类热度、成交和钱包流入同步共振的样本。",
+    "衍生品情绪偏多有帮助，但还没有强到可以忽略风险控制。",
+    "对 CLOW 这类高弹性但结构不稳的标的，优先放在观察或回避。"
   ],
-  "helpCards": [
-    {
-      "title": "全网速览",
-      "description": "看全网 24h 主线、现货涨跌榜、热度榜、钱包热度和 Meme 雷达。",
-      "examples": ["/alpha 全网", "/alpha global"]
-    },
-    {
-      "title": "分链速览",
-      "description": "看 Solana / BSC / Base 单链视角。",
-      "examples": ["/alpha base", "/alpha bsc", "/alpha solana"]
-    },
-    {
-      "title": "指定代币体检",
-      "description": "查某个币的价格、流动性、风险、信号与结论。",
-      "examples": ["/alpha 代币=ROBO", "查询ROBO的信息"]
-    },
-    {
-      "title": "广场文案",
-      "description": "生成可直接发 Binance Square 的文案草稿。",
-      "examples": ["/alpha 全网 广场版 前3", "/alpha 全网 广场版 署名开 不再询问"]
-    },
-    {
-      "title": "偏好设置",
-      "description": "控制显示模块和风格偏好。",
-      "examples": ["谨慎", "钱包关", "现货关", "热度开", "meme开"]
-    }
-  ]
+  "helpCards": []
 }
