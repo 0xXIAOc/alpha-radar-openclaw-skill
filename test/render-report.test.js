@@ -7,22 +7,24 @@ const { validateReportData } = require('../src/schema');
 const { renderTg, renderReport, renderSquare } = require('../src/render');
 const { parseNaturalCommand, normalizeData } = require('../scripts/render-report');
 
-test('validateReportData accepts the v5.1 market payload shape', () => {
+test('validateReportData accepts the v1.0 market payload shape', () => {
   const result = validateReportData(sample);
   assert.equal(result.queryType, 'market');
   assert.equal(result.preferences.squareDisclosureEnabled, false);
-  assert.equal(result.preferences.squareDisclosureAskEveryTime, true);
+  assert.equal(result.preferences.showSpotLeaderboards, true);
 });
 
-test('parseNaturalCommand understands disclosure flags', () => {
-  const result = parseNaturalCommand('全网 广场版 前3 谨慎 钱包关 署名开 不再询问');
-  assert.equal(result.scope, 'global');
+test('parseNaturalCommand understands base alias and module toggles', () => {
+  const result = parseNaturalCommand('Base 广场版 前3 署名开 不再询问 现货关 热度开 钱包热度关 meme开');
+  assert.equal(result.scope, 'base');
   assert.equal(result.style, 'square');
   assert.equal(result.top, '3');
-  assert.equal(result.profile, 'cautious');
-  assert.equal(result.wallet, 'false');
   assert.equal(result.disclosure, 'true');
   assert.equal(result.askDisclosure, 'false');
+  assert.equal(result.showSpot, 'false');
+  assert.equal(result.showExchangeHot, 'true');
+  assert.equal(result.showWalletHot, 'false');
+  assert.equal(result.showMeme, 'true');
 });
 
 test('normalizeData can switch to token mode from natural command', () => {
@@ -36,25 +38,25 @@ test('normalizeData can switch to token mode from natural command', () => {
   assert.equal(result.tokenQuery.symbol, 'ROBO');
 });
 
-test('renderTg includes leaderboards, spot focus, futures temperature, and meme radar', () => {
+test('renderTg includes spot and hot leaderboards and meme radar', () => {
   const output = renderTg(validateReportData(sample));
-  assert.match(output, /涨幅前三/);
-  assert.match(output, /跌幅前三/);
+  assert.match(output, /现货涨幅前三/);
+  assert.match(output, /现货跌幅前三/);
   assert.match(output, /交易所热度前三/);
   assert.match(output, /钱包热度前三/);
-  assert.match(output, /现货观察/);
-  assert.match(output, /合约温度/);
   assert.match(output, /Meme 雷达/);
 });
 
-test('renderReport includes trader-focused sections', () => {
+test('renderReport includes simplified trader sections', () => {
   const output = renderReport(validateReportData(sample));
-  assert.match(output, /## 三、现货观察/);
-  assert.match(output, /## 四、合约温度/);
-  assert.match(output, /## 五、Meme 雷达/);
+  assert.match(output, /## 现货涨幅前三/);
+  assert.match(output, /## 现货跌幅前三/);
+  assert.match(output, /## 交易所热度前三/);
+  assert.match(output, /## 钱包热度前三/);
+  assert.match(output, /## Meme 雷达/);
 });
 
-test('renderSquare supports disclosure line and leaderboards', () => {
+test('renderSquare supports disclosure line', () => {
   const output = renderSquare(
     validateReportData({
       ...sample,
@@ -66,21 +68,21 @@ test('renderSquare supports disclosure line and leaderboards', () => {
   );
 
   assert.match(output, /本文由OpenClaw发出/);
-  assert.match(output, /涨幅前三/);
+  assert.match(output, /现货涨幅前三/);
   assert.match(output, /交易所热度前三/);
 });
 
-test('render token square works', () => {
+test('render token card works', () => {
   const tokenData = validateReportData({
     title: '',
     queryType: 'token',
     tokenQuery: {
-      symbol: 'CAKE',
-      chain: 'BSC'
+      symbol: 'AERO',
+      chain: 'Base'
     },
     mode: 'square',
-    chainScope: 'bsc',
-    selectedChains: ['BSC'],
+    chainScope: 'base',
+    selectedChains: ['Base'],
     previewOnly: true,
     preferences: {
       profile: 'balanced',
@@ -89,53 +91,51 @@ test('render token square works', () => {
       lang: 'zh',
       wallet: true,
       preview: true,
+      showSpotLeaderboards: true,
+      showExchangeHot: true,
+      showWalletHot: true,
+      showMemeRadar: true,
       squareDisclosureEnabled: false,
       squareDisclosureAskEveryTime: true
     },
-    chain: 'BSC',
+    chain: 'Base',
     window: '24h',
-    generatedAt: '2026-03-11T07:00:00Z',
+    generatedAt: '2026-03-11T20:00:00Z',
     upstreamCalls: [
       { skill: 'query-token-info', status: 'ok' },
       { skill: 'trading-signal', status: 'ok' },
       { skill: 'query-token-audit', status: 'ok' }
     ],
     marketTheme: {},
-    leaderboards: {
-      gainersTop3: [],
-      losersTop3: [],
-      exchangeHotTop3: [],
-      walletHotTop3: []
-    },
-    spotFocus: { summary: '', top3: [] },
-    futuresTemperature: { summary: '', preferredChain: '', notes: [] },
+    spotLeaderboards: { gainersTop3: [], losersTop3: [] },
+    leaderboards: { exchangeHotTop3: [], walletHotTop3: [] },
     memeRadar: { summary: '', top3: [] },
     watchlist: [
       {
-        symbol: 'CAKE',
-        chain: 'BSC',
+        symbol: 'AERO',
+        chain: 'Base',
         action: '看',
-        score: 79,
-        confidence: 'high',
-        reason: '更符合流动性、成交与结构共振。',
+        score: 74,
+        confidence: 'medium',
+        reason: 'Base 侧更适合作为叙事跟踪票，热度与资金关注度都有延续空间。',
         metrics: {
-          price: '3.11',
-          volume24h: '18.4M',
-          liquidity: '12.7M',
-          top10Pct: '41.2%',
+          price: '1.82',
+          volume24h: '12.2M',
+          liquidity: '9.4M',
+          top10Pct: '36.1%',
           riskLevel: 'LOW'
         },
-        risk: '短线弹性不如纯情绪票。',
-        next: '继续观察 active buy 是否延续。'
+        risk: '更适合观察结构延续，不适合把它当作最高弹性情绪票。',
+        next: '看 Base 资金是否继续扩张。'
       }
     ],
     riskAlerts: [],
     walletAppendix: {},
-    conclusion: ['代币当前更适合研究型跟踪，而不是情绪化追高。']
+    conclusion: ['代币当前更适合作为 Base 侧结构观察，而不是情绪化追高。']
   });
 
   const output = renderSquare(tokenData);
-  assert.match(output, /Alpha Radar｜CAKE/);
+  assert.match(output, /Alpha Radar｜AERO/);
   assert.match(output, /看点：/);
   assert.match(output, /风险：/);
 });
