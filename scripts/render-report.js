@@ -6,60 +6,104 @@ const path = require('path');
 const { validateReportData } = require('../src/schema');
 const { renderTg, renderReport, renderSquare } = require('../src/render');
 
+const RESERVED_SCOPE_WORDS = new Set(['auto', 'global', 'solana', 'bsc', 'base', 'eth', 'ethereum']);
+const CHINESE_TOP_MAP = {
+  一: 1,
+  二: 2,
+  两: 2,
+  三: 3,
+  五: 5,
+  十: 10
+};
+
+function readOptionValue(argv, index, token) {
+  const value = argv[index + 1];
+  if (value === undefined || value.startsWith('--')) {
+    throw new Error(`Missing value for ${token}`);
+  }
+  return value;
+}
+
 function parseArgs(argv) {
-  const args = {
-    style: 'tg'
-  };
+  const args = {};
 
   for (let i = 2; i < argv.length; i += 1) {
     const token = argv[i];
 
     if (token === '--input') {
-      args.input = argv[++i];
+      args.input = readOptionValue(argv, i, token);
+      i += 1;
     } else if (token === '--style' || token === '--mode') {
-      args.style = argv[++i];
+      args.style = readOptionValue(argv, i, token);
+      i += 1;
+    } else if (token === '--format') {
+      args.format = readOptionValue(argv, i, token);
+      i += 1;
     } else if (token === '--output') {
-      args.output = argv[++i];
+      args.output = readOptionValue(argv, i, token);
+      i += 1;
     } else if (token === '--title') {
-      args.title = argv[++i];
+      args.title = readOptionValue(argv, i, token);
+      i += 1;
     } else if (token === '--scope' || token === '--chain-scope') {
-      args.scope = argv[++i];
+      args.scope = readOptionValue(argv, i, token);
+      i += 1;
     } else if (token === '--chain') {
-      args.chain = argv[++i];
+      args.chain = readOptionValue(argv, i, token);
+      i += 1;
     } else if (token === '--window') {
-      args.window = argv[++i];
+      args.window = readOptionValue(argv, i, token);
+      i += 1;
     } else if (token === '--preview') {
-      args.preview = argv[++i];
+      args.preview = readOptionValue(argv, i, token);
+      i += 1;
     } else if (token === '--profile') {
-      args.profile = argv[++i];
+      args.profile = readOptionValue(argv, i, token);
+      i += 1;
     } else if (token === '--risk') {
-      args.risk = argv[++i];
+      args.risk = readOptionValue(argv, i, token);
+      i += 1;
     } else if (token === '--top') {
-      args.top = argv[++i];
+      args.top = readOptionValue(argv, i, token);
+      i += 1;
     } else if (token === '--lang') {
-      args.lang = argv[++i];
+      args.lang = readOptionValue(argv, i, token);
+      i += 1;
     } else if (token === '--wallet') {
-      args.wallet = argv[++i];
+      args.wallet = readOptionValue(argv, i, token);
+      i += 1;
     } else if (token === '--token' || token === '--symbol') {
-      args.token = argv[++i];
+      args.token = readOptionValue(argv, i, token);
+      i += 1;
     } else if (token === '--contract') {
-      args.contract = argv[++i];
+      args.contract = readOptionValue(argv, i, token);
+      i += 1;
     } else if (token === '--query-type') {
-      args.queryType = argv[++i];
+      args.queryType = readOptionValue(argv, i, token);
+      i += 1;
     } else if (token === '--disclosure') {
-      args.disclosure = argv[++i];
+      args.disclosure = readOptionValue(argv, i, token);
+      i += 1;
     } else if (token === '--ask-disclosure') {
-      args.askDisclosure = argv[++i];
+      args.askDisclosure = readOptionValue(argv, i, token);
+      i += 1;
     } else if (token === '--show-spot') {
-      args.showSpot = argv[++i];
+      args.showSpot = readOptionValue(argv, i, token);
+      i += 1;
     } else if (token === '--show-exchange-hot') {
-      args.showExchangeHot = argv[++i];
+      args.showExchangeHot = readOptionValue(argv, i, token);
+      i += 1;
     } else if (token === '--show-wallet-hot') {
-      args.showWalletHot = argv[++i];
+      args.showWalletHot = readOptionValue(argv, i, token);
+      i += 1;
     } else if (token === '--show-meme') {
-      args.showMeme = argv[++i];
+      args.showMeme = readOptionValue(argv, i, token);
+      i += 1;
     } else if (token === '--command') {
-      args.command = argv[++i];
+      args.command = readOptionValue(argv, i, token);
+      i += 1;
+    } else if (token === '--validate-only' || token === '--dry-run') {
+      args.validateOnly = true;
     } else if (token === '--help' || token === '-h') {
       args.help = true;
     } else {
@@ -76,11 +120,16 @@ function usage() {
     '  node scripts/render-report.js --input <json-file> --style tg',
     '  node scripts/render-report.js --input <json-file> --style report',
     '  node scripts/render-report.js --input <json-file> --style square',
+    '  node scripts/render-report.js --input <json-file> --format json',
+    '  node scripts/render-report.js --input <json-file> --validate-only',
     '  cat data.json | node scripts/render-report.js --style tg',
     '',
     'Options:',
     '  --input <path>            JSON input file. Omit to read from stdin.',
     '  --style <style>           tg | report | square',
+    '  --format <format>         text | json',
+    '  --validate-only           Validate and normalize only, do not render text.',
+    '  --dry-run                 Alias of --validate-only.',
     '  --output <path>           Write output to file.',
     '  --title <title>           Override report title.',
     '  --scope <scope>           auto | global | solana | bsc | base | eth',
@@ -90,7 +139,7 @@ function usage() {
     '  --profile <value>         cautious | balanced | aggressive',
     '  --risk <value>            low | balanced | high',
     '  --top <n>                 shortlist size',
-    '  --lang <value>            zh | en',
+    '  --lang <value>            zh',
     '  --wallet <bool>           true | false',
     '  --token <value>           token symbol/name',
     '  --contract <value>        contract address',
@@ -165,6 +214,14 @@ function normalizeStyle(value) {
   throw new Error(`Invalid style: ${value}. Expected "tg", "report", or "square".`);
 }
 
+function normalizeFormat(value) {
+  if (!value) return 'text';
+  const normalized = String(value).trim().toLowerCase();
+  if (['text', 'txt', 'markdown', 'md'].includes(normalized)) return 'text';
+  if (normalized === 'json') return 'json';
+  throw new Error(`Invalid format: ${value}. Expected "text" or "json".`);
+}
+
 function normalizeBoolean(value, fallback) {
   if (value === undefined || value === null || value === '') return fallback;
   const normalized = String(value).trim().toLowerCase();
@@ -189,6 +246,11 @@ function applyAliasObject(target, source) {
   return target;
 }
 
+function isReservedTokenCandidate(value) {
+  const normalized = String(value || '').trim().toLowerCase();
+  return RESERVED_SCOPE_WORDS.has(normalized) || normalized === 'alpha';
+}
+
 function parseNaturalCommand(raw) {
   const result = {};
   if (!raw || !String(raw).trim()) return result;
@@ -205,6 +267,7 @@ function parseNaturalCommand(raw) {
   if (/(^|\s)(solana|索拉纳)(\s|$)/i.test(text)) result.scope = 'solana';
   if (/(^|\s)(bsc)(\s|$)/i.test(text)) result.scope = 'bsc';
   if (/(^|\s)(base)(\s|$)/i.test(text)) result.scope = 'base';
+  if (/(^|\s)(ethereum|eth)(\s|$)/i.test(text)) result.scope = 'ethereum';
 
   if (/(^|\s)(预览|短版|TG版)(\s|$)/.test(text)) result.style = 'tg';
   if (/(^|\s)(完整版|长版)(\s|$)/.test(text)) result.style = 'report';
@@ -232,7 +295,14 @@ function parseNaturalCommand(raw) {
   if (/(^|\s)(不再询问|记住设置)(\s|$)/.test(text)) result.askDisclosure = 'false';
 
   const topMatch = text.match(/前\s*(\d+)/);
-  if (topMatch) result.top = topMatch[1];
+  if (topMatch) {
+    result.top = topMatch[1];
+  } else {
+    const topCnMatch = text.match(/前\s*(一|二|两|三|五|十)/);
+    if (topCnMatch) {
+      result.top = String(CHINESE_TOP_MAP[topCnMatch[1]]);
+    }
+  }
 
   const tokenEqMatch = text.match(/(?:代币|币种|token|symbol)\s*=\s*([^\s]+)/i);
   if (tokenEqMatch) {
@@ -248,8 +318,9 @@ function parseNaturalCommand(raw) {
   if (!result.token) {
     for (const pattern of naturalTokenPatterns) {
       const match = text.match(pattern);
-      if (match && match[1]) {
-        result.token = match[1];
+      const candidate = match?.[1];
+      if (candidate && !isReservedTokenCandidate(candidate)) {
+        result.token = candidate;
         result.queryType = 'token';
         break;
       }
@@ -302,24 +373,54 @@ function defaultHelpCards() {
   ];
 }
 
+function chainLabelFromScope(scope, fallback = 'Auto') {
+  switch (scope) {
+    case 'auto':
+      return 'Auto';
+    case 'global':
+      return 'Global';
+    case 'solana':
+      return 'Solana';
+    case 'bsc':
+      return 'BSC';
+    case 'base':
+      return 'Base';
+    case 'eth':
+      return 'ETH';
+    case 'ethereum':
+      return 'Ethereum';
+    default:
+      return fallback;
+  }
+}
+
+function isSingleChainScope(scope) {
+  return ['solana', 'bsc', 'base', 'eth', 'ethereum'].includes(scope);
+}
+
 function normalizeData(raw, args = {}) {
   const validated = validateReportData(raw);
   const aliasArgs = parseNaturalCommand(args.command || '');
-
   const mergedArgs = applyAliasObject({ ...args }, aliasArgs);
 
   const mode = normalizeStyle(mergedArgs.style || validated.mode || 'tg');
   const scope =
     normalizeScope(mergedArgs.scope) ||
-    validated.chainScope ||
-    (validated.chain && validated.chain !== 'Auto' ? normalizeScope(validated.chain) : 'auto') ||
+    normalizeScope(mergedArgs.chain) ||
+    normalizeScope(validated.chainScope) ||
+    normalizeScope(validated.chain) ||
     'auto';
 
   const token = mergedArgs.token || validated.tokenQuery?.token || validated.tokenQuery?.symbol;
   const contract = mergedArgs.contract || validated.tokenQuery?.contractAddress;
-  const queryType =
-    mergedArgs.queryType ||
-    (token || contract ? 'token' : validated.queryType || 'market');
+  const queryType = mergedArgs.queryType || (token || contract ? 'token' : validated.queryType || 'market');
+  const resolvedChainLabel =
+    mergedArgs.chain ||
+    (scope === 'custom' ? validated.chain || 'Auto' : chainLabelFromScope(scope, validated.chain || 'Auto'));
+  const resolvedTokenChain =
+    mergedArgs.chain ||
+    validated.tokenQuery?.chain ||
+    (isSingleChainScope(scope) ? chainLabelFromScope(scope) : undefined);
 
   const merged = {
     ...validated,
@@ -327,14 +428,14 @@ function normalizeData(raw, args = {}) {
     mode,
     chainScope: scope,
     title: mergedArgs.title || validated.title || '',
-    chain: mergedArgs.chain || validated.chain || 'Auto',
+    chain: resolvedChainLabel,
     window: mergedArgs.window || validated.window || '24h',
     previewOnly: normalizeBoolean(mergedArgs.preview, validated.previewOnly !== false),
     tokenQuery: {
       ...(validated.tokenQuery || {}),
       ...(token ? { token, symbol: token } : {}),
       ...(contract ? { contractAddress: contract } : {}),
-      ...(mergedArgs.chain ? { chain: mergedArgs.chain } : {})
+      ...(resolvedTokenChain ? { chain: resolvedTokenChain } : {})
     },
     preferences: {
       ...(validated.preferences || {}),
@@ -374,12 +475,20 @@ async function main() {
       return;
     }
 
+    const format = normalizeFormat(args.format);
     const rawText = await readRawInput(args.input);
     const rawJson = JSON.parse(rawText);
     const data = normalizeData(rawJson, args);
 
     let output;
-    if (data.mode === 'report') {
+    if (args.validateOnly) {
+      output =
+        format === 'json'
+          ? `${JSON.stringify(data, null, 2)}\n`
+          : `Validation OK | mode=${data.mode} | queryType=${data.queryType} | scope=${data.chainScope}\n`;
+    } else if (format === 'json') {
+      output = `${JSON.stringify(data, null, 2)}\n`;
+    } else if (data.mode === 'report') {
       output = renderReport(data);
     } else if (data.mode === 'square') {
       output = renderSquare(data);
@@ -405,5 +514,8 @@ module.exports = {
   normalizeData,
   normalizeScope,
   normalizeStyle,
-  usage
+  normalizeFormat,
+  usage,
+  chainLabelFromScope,
+  isSingleChainScope
 };
