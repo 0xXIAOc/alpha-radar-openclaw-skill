@@ -12,14 +12,14 @@ const QueryTypeSchema = z.enum(['market', 'token', 'help']).default('market');
 
 const ConfidenceSchema = z.enum(['high', 'medium', 'low']).default('medium');
 
-const ActionSchema = z.enum(['看', '观察', '回避']).default('观察');
+const ActionSchema = z.string().trim().min(1).default('观察');
 
 const PreferencesSchema = z
   .object({
     profile: z.enum(['cautious', 'balanced', 'aggressive']).default('balanced'),
     risk: z.enum(['low', 'balanced', 'high']).default('balanced'),
     topN: z.number().int().min(1).max(10).default(3),
-    lang: z.enum(['zh', 'en']).default('zh'),
+    lang: z.enum(['zh']).default('zh'),
     wallet: z.boolean().default(true),
     preview: z.boolean().default(true),
     showSpotLeaderboards: z.boolean().default(true),
@@ -151,6 +151,27 @@ const MemeRadarSchema = z
     top3: []
   });
 
+const FuturesPanelSchema = z.object({
+  symbol: z.string().optional(),
+  globalLongShortRatio: z.number().nullable().optional(),
+  topLongShortRatio: z.number().nullable().optional(),
+  openInterestValue: z.union([z.string(), z.number()]).optional(),
+  openInterestChangePct: z.number().nullable().optional(),
+  fundingRate: z.number().nullable().optional(),
+  takerBuySellRatio: z.number().nullable().optional(),
+  stance: z.string().optional()
+});
+
+const FuturesSentimentSchema = z
+  .object({
+    summary: z.string().optional(),
+    panels: z.array(FuturesPanelSchema).default([])
+  })
+  .default({
+    summary: '',
+    panels: []
+  });
+
 const HelpCardSchema = z.object({
   title: z.string(),
   description: z.string(),
@@ -180,6 +201,7 @@ const ReportDataSchema = z.object({
   spotLeaderboards: SpotLeaderboardsSchema,
   leaderboards: LeaderboardsSchema,
   memeRadar: MemeRadarSchema,
+  futuresSentiment: FuturesSentimentSchema,
   watchlist: z.array(WatchlistItemSchema).default([]),
   riskAlerts: z.array(RiskAlertSchema).default([]),
   walletAppendix: z
@@ -216,6 +238,7 @@ module.exports = {
   SpotLeaderboardsSchema,
   LeaderboardsSchema,
   MemeRadarSchema,
+  FuturesSentimentSchema,
   ReportDataSchema,
   validateReportData
 };
