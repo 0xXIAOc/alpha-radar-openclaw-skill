@@ -7,11 +7,17 @@ const { validateReportData } = require('../src/schema');
 const { renderTg, renderReport, renderSquare } = require('../src/render');
 const { parseNaturalCommand, normalizeData } = require('../scripts/render-report');
 
-test('validateReportData accepts the v1.0 market payload shape', () => {
+test('validateReportData accepts final payload shape with base support', () => {
   const result = validateReportData(sample);
   assert.equal(result.queryType, 'market');
   assert.equal(result.preferences.squareDisclosureEnabled, false);
   assert.equal(result.preferences.showSpotLeaderboards, true);
+  assert.ok(result.selectedChains.includes('Base'));
+});
+
+test('parseNaturalCommand understands help mode', () => {
+  const result = parseNaturalCommand('Alpha 有哪些功能');
+  assert.equal(result.queryType, 'help');
 });
 
 test('parseNaturalCommand understands base alias and module toggles', () => {
@@ -72,7 +78,18 @@ test('renderSquare supports disclosure line', () => {
   assert.match(output, /交易所热度前三/);
 });
 
-test('render token card works', () => {
+test('render help mode works', () => {
+  const output = renderTg(
+    validateReportData({
+      ...sample,
+      queryType: 'help'
+    })
+  );
+  assert.match(output, /Alpha 可用功能/);
+  assert.match(output, /全网速览/);
+});
+
+test('render token card works for Base token', () => {
   const tokenData = validateReportData({
     title: '',
     queryType: 'token',
@@ -131,7 +148,8 @@ test('render token card works', () => {
     ],
     riskAlerts: [],
     walletAppendix: {},
-    conclusion: ['代币当前更适合作为 Base 侧结构观察，而不是情绪化追高。']
+    conclusion: ['代币当前更适合作为 Base 侧结构观察，而不是情绪化追高。'],
+    helpCards: []
   });
 
   const output = renderSquare(tokenData);
