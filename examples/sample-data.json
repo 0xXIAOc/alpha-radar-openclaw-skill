@@ -21,6 +21,7 @@
     "showExchangeHot": true,
     "showWalletHot": true,
     "showMemeRadar": true,
+    "showFuturesSentiment": true,
     "squareDisclosureEnabled": true,
     "squareDisclosureAskEveryTime": false
   },
@@ -198,7 +199,7 @@
         "topLongShortRatio": 1.15,
         "openInterestValue": "210033120",
         "openInterestChangePct": 1.44,
-        "fundingRate": 8.9e-05,
+        "fundingRate": 0.000089,
         "takerBuySellRatio": 1.03,
         "stance": "大户偏多，散户偏弱"
       },
