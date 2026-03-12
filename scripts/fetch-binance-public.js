@@ -7,6 +7,14 @@ const path = require('path');
 const SPOT_BASE = 'https://api.binance.com';
 const FUTURES_BASE = 'https://fapi.binance.com';
 
+function readOptionValue(argv, index, token) {
+  const value = argv[index + 1];
+  if (value === undefined || value.startsWith('--')) {
+    throw new Error(`Missing value for ${token}`);
+  }
+  return value;
+}
+
 function parseArgs(argv) {
   const args = {
     output: '',
@@ -19,16 +27,20 @@ function parseArgs(argv) {
     const token = argv[i];
 
     if (token === '--output') {
-      args.output = argv[++i];
+      args.output = readOptionValue(argv, i, token);
+      i += 1;
     } else if (token === '--futures-symbols') {
-      args.futuresSymbols = String(argv[++i])
+      args.futuresSymbols = String(readOptionValue(argv, i, token))
         .split(',')
         .map((x) => x.trim().toUpperCase())
         .filter(Boolean);
+      i += 1;
     } else if (token === '--top') {
-      args.top = Math.max(1, Math.min(Number(argv[++i]) || 3, 10));
+      args.top = Math.max(1, Math.min(Number(readOptionValue(argv, i, token)) || 3, 10));
+      i += 1;
     } else if (token === '--min-quote-volume') {
-      args.minQuoteVolume = Number(argv[++i]) || 1_000_000;
+      args.minQuoteVolume = Number(readOptionValue(argv, i, token)) || 1_000_000;
+      i += 1;
     } else if (token === '--help' || token === '-h') {
       args.help = true;
     } else {
@@ -121,29 +133,16 @@ function pickSpotLeaderboards(tickers, top, minQuoteVolume) {
       note: x.note
     }));
 
-  return {
-    gainersTop3: gainers,
-    losersTop3: losers
-  };
+  return { gainersTop3: gainers, losersTop3: losers };
 }
 
 async function fetchLongShort(symbol) {
   const [globalLs, topLs, oiHist, funding, taker] = await Promise.allSettled([
-    fetchJson(
-      `${FUTURES_BASE}/futures/data/globalLongShortAccountRatio?symbol=${symbol}&period=1h&limit=2`
-    ),
-    fetchJson(
-      `${FUTURES_BASE}/futures/data/topLongShortAccountRatio?symbol=${symbol}&period=1h&limit=2`
-    ),
-    fetchJson(
-      `${FUTURES_BASE}/futures/data/openInterestHist?symbol=${symbol}&period=1h&limit=2`
-    ),
-    fetchJson(
-      `${FUTURES_BASE}/fapi/v1/fundingRate?symbol=${symbol}&limit=1`
-    ),
-    fetchJson(
-      `${FUTURES_BASE}/futures/data/takerlongshortRatio?symbol=${symbol}&period=1h&limit=2`
-    )
+    fetchJson(`${FUTURES_BASE}/futures/data/globalLongShortAccountRatio?symbol=${symbol}&period=1h&limit=2`),
+    fetchJson(`${FUTURES_BASE}/futures/data/topLongShortAccountRatio?symbol=${symbol}&period=1h&limit=2`),
+    fetchJson(`${FUTURES_BASE}/futures/data/openInterestHist?symbol=${symbol}&period=1h&limit=2`),
+    fetchJson(`${FUTURES_BASE}/fapi/v1/fundingRate?symbol=${symbol}&limit=1`),
+    fetchJson(`${FUTURES_BASE}/futures/data/takerlongshortRatio?symbol=${symbol}&period=1h&limit=2`)
   ]);
 
   function latestValue(settled) {
@@ -178,11 +177,24 @@ async function fetchLongShort(symbol) {
   let stance = '中性';
   if (Number.isFinite(topRatio) && topRatio > 1.1 && Number.isFinite(globalRatio) && globalRatio > 1.0) {
     stance = '多头偏强';
-  } else if (Number.isFinite(topRatio) && topRatio < 0.9 && Number.isFinite(globalRatio) && globalRatio < 1.0) {
+  } else if (
+    Number.isFinite(topRatio) &&
+    topRatio < 0.9 &&
+    Number.isFinite(globalRatio) &&
+    globalRatio < 1.0
+  ) {
     stance = '空头偏强';
-  } else if (Number.isFinite(topRatio) && Number.isFinite(globalRatio) && topRatio > globalRatio + 0.15) {
+  } else if (
+    Number.isFinite(topRatio) &&
+    Number.isFinite(globalRatio) &&
+    topRatio > globalRatio + 0.15
+  ) {
     stance = '大户偏多，散户偏弱';
-  } else if (Number.isFinite(topRatio) && Number.isFinite(globalRatio) && topRatio + 0.15 < globalRatio) {
+  } else if (
+    Number.isFinite(topRatio) &&
+    Number.isFinite(globalRatio) &&
+    topRatio + 0.15 < globalRatio
+  ) {
     stance = '散户偏多，大户偏保守';
   }
 
@@ -199,13 +211,13 @@ async function fetchLongShort(symbol) {
 }
 
 function buildFuturesSummary(panels) {
-  const valid = panels.filter((x) => x);
+  const valid = panels.filter(Boolean);
   if (valid.length === 0) {
     return '本轮未成功获取衍生品情绪数据。';
   }
 
-  const strongLong = valid.filter((x) => x.stance.includes('多')).length;
-  const strongShort = valid.filter((x) => x.stance.includes('空')).length;
+  const strongLong = valid.filter((x) => String(x.stance || '').includes('多')).length;
+  const strongShort = valid.filter((x) => String(x.stance || '').includes('空')).length;
 
   if (strongLong >= 2) {
     return '衍生品情绪整体偏多，但需要留意资金费率与持仓量是否同步升温。';
@@ -216,21 +228,42 @@ function buildFuturesSummary(panels) {
   return '衍生品情绪分化较大，更适合结合现货热度和成交结构判断。';
 }
 
-function buildUpstreamCalls(spotOk, futuresPanels) {
-  const futuresOk = futuresPanels.length > 0;
+function ensureTop3(list) {
+  return Array.isArray(list) ? list.slice(0, 3) : [];
+}
+
+function summarizeResultStatus(isOk, hasAnyData) {
+  if (isOk && hasAnyData) return 'ok';
+  if (!isOk && hasAnyData) return 'partial';
+  return 'failed';
+}
+
+function buildUpstreamCalls(spotOk, spotLeaderboards, futuresOk, futuresPanels) {
+  const hasSpotData =
+    ensureTop3(spotLeaderboards?.gainersTop3).length > 0 || ensureTop3(spotLeaderboards?.losersTop3).length > 0;
+  const validFuturesPanels = (Array.isArray(futuresPanels) ? futuresPanels : []).filter(
+    (x) => x && !String(x.stance || '').startsWith('获取失败')
+  );
+  const hasFuturesData = validFuturesPanels.length > 0;
 
   return [
     {
       skill: 'spot-public-api',
-      status: spotOk ? 'ok' : 'failed',
-      message: spotOk ? '通过 Binance Spot 公开 API 获取现货 24h 榜单' : '未能获取现货 24h 榜单'
+      status: summarizeResultStatus(spotOk, hasSpotData),
+      message: spotOk
+        ? '通过 Binance Spot 公开 API 获取现货 24h 榜单'
+        : hasSpotData
+          ? 'Spot 主请求失败，但保留了可用现货榜单'
+          : '未能获取现货 24h 榜单'
     },
     {
       skill: 'futures-public-api',
-      status: futuresOk ? 'ok' : 'failed',
+      status: summarizeResultStatus(futuresOk, hasFuturesData),
       message: futuresOk
         ? '通过 Binance Futures 公开 API 获取多空比、持仓量、资金费率和主动买卖量比'
-        : '未能获取衍生品情绪数据'
+        : hasFuturesData
+          ? '部分衍生品面板成功，部分请求失败'
+          : '未能获取衍生品情绪数据'
     }
   ];
 }
@@ -238,7 +271,6 @@ function buildUpstreamCalls(spotOk, futuresPanels) {
 function buildConclusion(spotLeaderboards, futuresSummary) {
   const gainers = ensureTop3(spotLeaderboards?.gainersTop3);
   const first = gainers[0]?.symbol || '强势现货';
-
   return [
     `现货端最强的短线注意力集中在 ${first} 这类高弹性标的，但不要只看涨幅，必须同步看成交和持仓结构。`,
     futuresSummary,
@@ -246,20 +278,24 @@ function buildConclusion(spotLeaderboards, futuresSummary) {
   ];
 }
 
-function ensureTop3(list) {
-  return Array.isArray(list) ? list.slice(0, 3) : [];
-}
-
 async function main() {
   const args = parseArgs(process.argv);
-
   if (args.help) {
     process.stdout.write(`${usage()}\n`);
     return;
   }
 
-  const spotTicker = await fetchJson(`${SPOT_BASE}/api/v3/ticker/24hr`);
-  const spotLeaderboards = pickSpotLeaderboards(spotTicker, args.top, args.minQuoteVolume);
+  let spotOk = false;
+  let spotLeaderboards = { gainersTop3: [], losersTop3: [] };
+  let spotError = '';
+
+  try {
+    const spotTicker = await fetchJson(`${SPOT_BASE}/api/v3/ticker/24hr`);
+    spotLeaderboards = pickSpotLeaderboards(spotTicker, args.top, args.minQuoteVolume);
+    spotOk = true;
+  } catch (error) {
+    spotError = error.message;
+  }
 
   const futuresPanelsRaw = await Promise.all(
     args.futuresSymbols.map(async (symbol) => {
@@ -281,11 +317,15 @@ async function main() {
   );
 
   const futuresPanels = futuresPanelsRaw.filter(Boolean);
-  const futuresSummary = buildFuturesSummary(
-    futuresPanels.filter((x) => !String(x.stance).startsWith('获取失败'))
-  );
-
+  const validFuturesPanels = futuresPanels.filter((x) => !String(x.stance || '').startsWith('获取失败'));
+  const futuresOk = validFuturesPanels.length === futuresPanels.length && futuresPanels.length > 0;
+  const futuresSummary = buildFuturesSummary(validFuturesPanels);
   const now = new Date().toISOString();
+
+  const upstreamCalls = buildUpstreamCalls(spotOk, spotLeaderboards, futuresOk, futuresPanels);
+  if (!spotOk && spotError) {
+    upstreamCalls[0].message = `${upstreamCalls[0].message}：${spotError}`;
+  }
 
   const payload = {
     title: '',
@@ -312,7 +352,7 @@ async function main() {
     chain: 'Global',
     window: '24h',
     generatedAt: now,
-    upstreamCalls: buildUpstreamCalls(true, futuresPanels),
+    upstreamCalls,
     marketTheme: {
       summary: '本轮使用 Binance 公开 API 构建现货榜单与衍生品情绪面板。',
       signals: [
@@ -322,30 +362,20 @@ async function main() {
       stance: '观察确认'
     },
     spotLeaderboards,
-    leaderboards: {
-      exchangeHotTop3: [],
-      walletHotTop3: []
-    },
-    memeRadar: {
-      summary: '',
-      top3: []
-    },
+    leaderboards: { exchangeHotTop3: [], walletHotTop3: [] },
+    memeRadar: { summary: '', top3: [] },
     futuresSentiment: {
       summary: futuresSummary,
       panels: futuresPanels
     },
     watchlist: [],
     riskAlerts: [],
-    walletAppendix: {
-      summary: '',
-      notes: []
-    },
+    walletAppendix: { summary: '', notes: [] },
     conclusion: buildConclusion(spotLeaderboards, futuresSummary),
     helpCards: []
   };
 
   const text = JSON.stringify(payload, null, 2);
-
   if (args.output) {
     const resolved = path.resolve(process.cwd(), args.output);
     fs.mkdirSync(path.dirname(resolved), { recursive: true });
@@ -355,7 +385,24 @@ async function main() {
   process.stdout.write(text);
 }
 
-main().catch((error) => {
-  process.stderr.write(`[fetch-binance-public] ${error.message}\n`);
-  process.exit(1);
-});
+if (require.main === module) {
+  main().catch((error) => {
+    process.stderr.write(`[fetch-binance-public] ${error.message}\n`);
+    process.exit(1);
+  });
+}
+
+module.exports = {
+  parseArgs,
+  usage,
+  fetchJson,
+  toNum,
+  stripQuoteAsset,
+  pickSpotLeaderboards,
+  fetchLongShort,
+  buildFuturesSummary,
+  ensureTop3,
+  buildUpstreamCalls,
+  buildConclusion,
+  summarizeResultStatus
+};
