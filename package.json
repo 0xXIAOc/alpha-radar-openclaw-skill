@@ -1,26 +1,23 @@
 {
   "name": "alpha-radar-openclaw-skill",
-  "version": "1.0.1",
-  "private": true,
-  "description": "OpenClaw custom skill that renders Binance research data into TG previews, full reports, token cards, help cards, or Binance Square drafts.",
+  "version": "1.0.1-optimized",
+  "description": "Optimized Alpha Radar renderer and sample utilities",
+  "main": "src/render.js",
   "license": "MIT",
   "type": "commonjs",
   "bin": {
-    "alpha-radar-render": "scripts/render-report.js"
+    "alpha-radar-render": "./scripts/render-report.js",
+    "alpha-radar-fetch-binance-public": "./scripts/fetch-binance-public.js"
   },
   "scripts": {
-    "tg": "node scripts/render-report.js --input examples/sample-data.json --style tg --output examples/sample-tg.txt",
+    "test": "node --test",
+    "smoke": "node scripts/smoke.js",
     "report": "node scripts/render-report.js --input examples/sample-data.json --style report --output examples/sample-report.md",
     "square": "node scripts/render-report.js --input examples/sample-data.json --style square --output examples/sample-square.txt",
-    "help": "node scripts/render-report.js --input examples/sample-data.json --style tg --command \"帮助\" --output examples/sample-help.txt",
-    "test": "node --test",
-    "smoke": "node scripts/render-report.js --input examples/sample-data.json --style tg --output .tmp-check-tg.txt && node scripts/render-report.js --input examples/sample-data.json --style report --output .tmp-check-report.md && node scripts/render-report.js --input examples/sample-data.json --style square --output .tmp-check-square.txt && node scripts/render-report.js --input examples/sample-data.json --style tg --command \"帮助\" --output .tmp-check-help.txt && node -e \"require('fs').rmSync('.tmp-check-tg.txt',{force:true});require('fs').rmSync('.tmp-check-report.md',{force:true});require('fs').rmSync('.tmp-check-square.txt',{force:true});require('fs').rmSync('.tmp-check-help.txt',{force:true});\"",
-    "check": "npm run test && npm run smoke"
-  },
-  "engines": {
-    "node": ">=18"
+    "tg": "node scripts/render-report.js --input examples/sample-data.json --style tg --output examples/sample-tg.txt",
+    "validate": "node scripts/render-report.js --input examples/sample-data.json --validate-only"
   },
   "dependencies": {
-    "zod": "^3.24.2"
+    "zod": "^4.3.6"
   }
 }
