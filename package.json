@@ -11,6 +11,7 @@
   },
   "scripts": {
     "test": "node --test",
+    "check": "npm run test && npm run smoke",
     "smoke": "node scripts/smoke.js",
     "report": "node scripts/render-report.js --input examples/sample-data.json --style report --output examples/sample-report.md",
     "square": "node scripts/render-report.js --input examples/sample-data.json --style square --output examples/sample-square.txt",
@@ -19,5 +20,8 @@
   },
   "dependencies": {
     "zod": "^4.3.6"
+  },
+  "engines": {
+    "node": ">=18"
   }
 }
