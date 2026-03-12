@@ -27,6 +27,36 @@ const SINGLE_SCOPE_LABELS = {
   eth: 'ETH'
 };
 
+function defaultHelpCards() {
+  return [
+    {
+      title: '全网速览',
+      description: '看全网 24h 主线、现货涨跌榜、热度榜、钱包热度和 Meme 雷达。',
+      examples: ['/alpha 全网', '/alpha global']
+    },
+    {
+      title: '分链速览',
+      description: '看 Solana / BSC / Base 单链视角。',
+      examples: ['/alpha base', '/alpha bsc', '/alpha solana']
+    },
+    {
+      title: '指定代币体检',
+      description: '查某个币的价格、流动性、风险、信号与结论。',
+      examples: ['/alpha 代币=ROBO', '查询ROBO的信息']
+    },
+    {
+      title: '广场文案',
+      description: '生成可直接发 Binance Square 的文案草稿。',
+      examples: ['/alpha 全网 广场版 前3', '/alpha 全网 广场版 署名开 不再询问']
+    },
+    {
+      title: '偏好设置',
+      description: '控制显示模块和风格偏好。',
+      examples: ['谨慎', '钱包关', '现货关', '热度开', '钱包热度关', 'meme开', '衍生品关']
+    }
+  ];
+}
+
 function scopeLabel(data) {
   const scope = String(data?.chainScope || '').trim().toLowerCase();
   const selectedChains = ensureArray(data?.selectedChains);
@@ -46,29 +76,8 @@ function scopeLabel(data) {
   return stringValue(data?.chain || data?.chainScope || 'Unknown', 'Unknown');
 }
 
-function formatMetrics(metrics = {}) {
-  const pairs = [
-    ['价格', metrics.price],
-    ['24h涨跌', metrics.priceChange24h],
-    ['24h成交量', metrics.volume24h],
-    ['流动性', metrics.liquidity],
-    ['市值', metrics.marketCap],
-    ['Holders', metrics.holders],
-    ['Top10占比', metrics.top10Pct],
-    ['Smart Money', metrics.smartMoney],
-    ['风险等级', metrics.riskLevel],
-    ['24h搜索', metrics.searchCount24h]
-  ];
-
-  const parts = pairs
-    .filter(([, value]) => value !== undefined && value !== null && value !== '')
-    .map(([label, value]) => `${label}：${value}`);
-
-  return parts.length > 0 ? parts.join('；') : '关键数据未提供';
-}
-
-function metricsTable(metrics = {}) {
-  const rows = [
+function metricRows(metrics = {}) {
+  return [
     ['价格', metrics.price],
     ['24h涨跌', metrics.priceChange24h],
     ['24h成交量', metrics.volume24h],
@@ -80,6 +89,27 @@ function metricsTable(metrics = {}) {
     ['风险等级', metrics.riskLevel],
     ['24h搜索', metrics.searchCount24h]
   ].filter(([, value]) => value !== undefined && value !== null && value !== '');
+}
+
+function formatMetrics(metrics = {}) {
+  const parts = metricRows(metrics).map(([label, value]) => `${label}：${value}`);
+  return parts.length > 0 ? parts.join('；') : '关键数据未提供';
+}
+
+function formatMetricsCompact(metrics = {}) {
+  const pairs = [
+    ['价格', metrics.price],
+    ['24h涨跌', metrics.priceChange24h],
+    ['24h成交量', metrics.volume24h],
+    ['风险等级', metrics.riskLevel]
+  ].filter(([, value]) => value !== undefined && value !== null && value !== '');
+
+  if (pairs.length === 0) return '关键数据未提供';
+  return pairs.map(([label, value]) => `${label}：${value}`).join('；');
+}
+
+function metricsTable(metrics = {}) {
+  const rows = metricRows(metrics);
 
   if (rows.length === 0) {
     return ['关键数据未提供。'];
@@ -122,6 +152,12 @@ function getPrimaryToken(data) {
     chain: data?.tokenQuery?.chain || data?.chain || '',
     contractAddress: data?.tokenQuery?.contractAddress || ''
   };
+}
+
+function getTokenItems(data) {
+  const sorted = sortWatchlist(data?.watchlist);
+  if (sorted.length > 0) return sorted;
+  return [getPrimaryToken(data)];
 }
 
 function shouldShowFailureDetails(data, mode) {
@@ -204,6 +240,13 @@ function formatSignedPercent(value) {
   return `${num > 0 ? '+' : ''}${fixed}%`;
 }
 
+function formatReadableDollar(value) {
+  if (value === null || value === undefined || value === '') return '';
+  const num = Number(String(value).replace(/,/g, ''));
+  if (!Number.isFinite(num)) return String(value);
+  return `$${Math.round(num).toLocaleString('en-US')}`;
+}
+
 function formatFuturesPanel(panel) {
   const symbol = panel?.symbol || '未知合约';
   const parts = [];
@@ -214,6 +257,9 @@ function formatFuturesPanel(panel) {
   }
   if (panel?.globalLongShortRatio !== null && panel?.globalLongShortRatio !== undefined) {
     parts.push(`全市场多空 ${panel.globalLongShortRatio}`);
+  }
+  if (panel?.openInterestValue !== null && panel?.openInterestValue !== undefined && panel?.openInterestValue !== '') {
+    parts.push(`持仓 ${formatReadableDollar(panel.openInterestValue)}`);
   }
   if (panel?.openInterestChangePct !== null && panel?.openInterestChangePct !== undefined) {
     parts.push(`OI ${formatSignedPercent(panel.openInterestChangePct)}`);
@@ -334,13 +380,14 @@ function appendSection(lines, title, contentLines) {
 
 function renderHelp(data) {
   const lines = [];
+  const cards = ensureArray(data?.helpCards).length > 0 ? ensureArray(data?.helpCards) : defaultHelpCards();
 
-  lines.push('📊 Alpha 可用功能');
+  lines.push('Alpha 可用功能');
   lines.push('');
   lines.push('你可以这样用：');
   lines.push('');
 
-  ensureArray(data?.helpCards).forEach((card, idx) => {
+  cards.forEach((card, idx) => {
     lines.push(`${idx + 1}. ${card.title}`);
     lines.push(`   ${card.description}`);
     ensureArray(card.examples).forEach((example) => {
@@ -356,6 +403,7 @@ function renderHelp(data) {
   lines.push('- 热度开 / 热度关');
   lines.push('- 钱包热度开 / 钱包热度关');
   lines.push('- meme开 / meme关');
+  lines.push('- 衍生品开 / 衍生品关');
   lines.push('- 署名开 / 署名关');
   lines.push('- 每次询问 / 不再询问');
   lines.push('');
@@ -404,13 +452,13 @@ function renderMarketTg(data) {
         );
 
   const futuresSentiment =
-    hasFuturesSentimentData(data) || futuresReady
-      ? renderFuturesSentimentLines(
+    data?.preferences?.showFuturesSentiment === false || !(hasFuturesSentimentData(data) || futuresReady)
+      ? []
+      : renderFuturesSentimentLines(
           data?.futuresSentiment || {},
           futuresReady ? '暂无衍生品情绪数据' : '本轮未成功调用 `trading-signal`',
           { inlineLabel: true, maxPanels: 3 }
-        )
-      : [];
+        );
 
   const exchangeHot =
     data?.preferences?.showExchangeHot === false
@@ -459,7 +507,9 @@ function renderMarketTg(data) {
       const score = typeof item?.score === 'number' ? `${item.score}/100` : '未评分';
       const action = item?.action || item?.verdict || '观察';
       const confidence = confidenceLabel(item?.confidence || 'medium');
-      lines.push(`- ${symbol}${chain}｜${action}｜${score}｜置信度${confidence}`);
+      const sources = ensureArray(item?.sourceFlags);
+      const sourceText = sources.length > 0 ? `｜来源：${sources.join(' / ')}` : '';
+      lines.push(`- ${symbol}${chain}｜${action}｜${score}｜置信度${confidence}${sourceText}`);
       lines.push(`  ${stringValue(item?.reason, '数据不足，暂不下结论。')}`);
     });
   }
@@ -474,6 +524,10 @@ function renderMarketTg(data) {
       const chain = risk?.chain ? ` [${risk.chain}]` : '';
       const severity = severityLabel(risk?.severity || 'medium');
       lines.push(`- ${symbol}${chain}｜${severity}｜${stringValue(risk?.reason, '存在风险')}`);
+      const flags = ensureArray(risk?.flags);
+      if (flags.length > 0) {
+        lines.push(`  标签：${flags.join('；')}`);
+      }
     });
   }
 
@@ -517,33 +571,49 @@ function renderTokenTg(data) {
   return `${lines.join('\n').trim()}\n`;
 }
 
-function renderTokenReport(data) {
-  const lines = [];
-  const token = getPrimaryToken(data);
+function renderSingleTokenReportBlock(lines, token, index, total) {
   const symbol = token?.symbol || token?.name || '未知代币';
   const chain = token?.chain ? ` [${token.chain}]` : '';
   const score = typeof token?.score === 'number' ? `${token.score}/100` : '未评分';
   const action = token?.action || token?.verdict || '观察';
+  const sources = ensureArray(token?.sourceFlags);
 
-  lines.push(`# ${data?.title || `Alpha Radar | ${symbol}${chain} | ${stringValue(data?.window, '24h')}`}`);
+  if (total > 1) {
+    lines.push(`## ${index + 1}. ${symbol}${chain}`);
+  } else {
+    lines.push('## 代币概览');
+  }
+  lines.push(`标的：${symbol}${chain}`);
+  if (token?.contractAddress) lines.push(`合约：${token.contractAddress}`);
+  lines.push(`结论：${action}｜${score}`);
+  lines.push(`看点：${stringValue(token?.reason, '暂未获得充分结论。')}`);
+  if (sources.length > 0) lines.push(`信号来源：${sources.join(' / ')}`);
+  lines.push('');
+
+  lines.push(total > 1 ? '### 关键指标' : '## 关键指标');
+  metricsTable(token?.metrics || {}).forEach((line) => lines.push(line));
+  lines.push('');
+
+  lines.push(total > 1 ? '### 风险分析' : '## 风险分析');
+  lines.push(stringValue(token?.risk, '未见单独高亮风险。'));
+  lines.push('');
+
+  lines.push(total > 1 ? '### 下一步观察' : '## 下一步观察');
+  lines.push(stringValue(token?.next, '继续观察资金、成交与风险是否共振。'));
+  lines.push('');
+}
+
+function renderTokenReport(data) {
+  const lines = [];
+  const tokenItems = getTokenItems(data);
+
+  lines.push(`# ${data?.title || `Alpha Radar | Token | ${stringValue(data?.window, '24h')}`}`);
   if (data?.generatedAt) lines.push(`生成时间：${data.generatedAt}`);
   lines.push('');
 
-  appendSection(
-    lines,
-    '## 代币概览',
-    [
-      `标的：${symbol}${chain}`,
-      token?.contractAddress ? `合约：${token.contractAddress}` : '',
-      `结论：${action}｜${score}`,
-      `看点：${stringValue(token?.reason, '暂未获得充分结论。')}`,
-      ensureArray(token?.sourceFlags).length ? `信号来源：${token.sourceFlags.join(' / ')}` : ''
-    ].filter(Boolean)
-  );
-
-  appendSection(lines, '## 关键指标', metricsTable(token?.metrics || {}));
-  appendSection(lines, '## 风险分析', [stringValue(token?.risk, '未见单独高亮风险。')]);
-  appendSection(lines, '## 下一步观察', [stringValue(token?.next, '继续观察资金、成交与风险是否共振。')]);
+  tokenItems.forEach((token, index) => {
+    renderSingleTokenReportBlock(lines, token, index, tokenItems.length);
+  });
 
   if (shouldShowFailureDetails(data, 'report')) {
     appendSection(lines, '## 上游失败', renderUpstreamFailureLines(data));
@@ -596,7 +666,7 @@ function renderMarketReport(data) {
     );
   }
 
-  if (hasFuturesSentimentData(data) || futuresReady) {
+  if (data?.preferences?.showFuturesSentiment !== false && (hasFuturesSentimentData(data) || futuresReady)) {
     appendSection(
       lines,
       '## 衍生品情绪',
@@ -650,19 +720,24 @@ function renderMarketReport(data) {
   if (sorted.length === 0) {
     watchlistLines.push('暂无明确入选标的。');
   } else {
-    sorted.slice(0, getTopN(data, 5)).forEach((item) => {
+    sorted.slice(0, getTopN(data, 5)).forEach((item, index) => {
       const symbol = item?.symbol || item?.name || '未知代币';
       const chain = item?.chain ? ` [${item.chain}]` : '';
       const score = typeof item?.score === 'number' ? `${item.score}/100` : '未评分';
       const action = item?.action || item?.verdict || '观察';
-      watchlistLines.push(`- ${symbol}${chain}｜${action}｜${score}`);
-      watchlistLines.push(`  理由：${stringValue(item?.reason, '数据不足，暂不下结论。')}`);
-      if (item?.metrics && Object.keys(item.metrics).length > 0) {
-        watchlistLines.push(`  关键数据：${formatMetrics(item.metrics)}`);
+      const sources = ensureArray(item?.sourceFlags);
+
+      watchlistLines.push(`### ${index + 1}. ${symbol}${chain}｜${action}｜${score}`);
+      watchlistLines.push(`理由：${stringValue(item?.reason, '数据不足，暂不下结论。')}`);
+      if (sources.length > 0) {
+        watchlistLines.push(`来源：${sources.join(' / ')}`);
       }
+      watchlistLines.push('关键指标：');
+      metricsTable(item?.metrics || {}).forEach((line) => watchlistLines.push(line));
       if (item?.next) {
-        watchlistLines.push(`  下一步：${item.next}`);
+        watchlistLines.push(`下一步：${item.next}`);
       }
+      watchlistLines.push('');
     });
   }
   appendSection(lines, '## 值得看 Top', watchlistLines);
@@ -737,7 +812,7 @@ function renderSquare(data) {
     lines.push('');
     lines.push(`结论：${action}｜${score}`);
     lines.push(`看点：${stringValue(token?.reason, '暂未获得充分结论。')}`);
-    lines.push(`关键数据：${formatMetrics(token?.metrics || {})}`);
+    lines.push(`关键数据：${formatMetricsCompact(token?.metrics || {})}`);
     lines.push(`风险：${stringValue(token?.risk, '未见单独高亮风险。')}`);
     lines.push(`下一步：${stringValue(token?.next, '继续观察资金、成交与风险是否共振。')}`);
     if (conclusionSummary) {
@@ -777,13 +852,13 @@ function renderSquare(data) {
           '跌幅',
           spotReady ? '暂无现货跌幅数据' : '本轮未成功调用 `spot`'
         ),
-    hasFuturesSentimentData(data) || futuresReady
-      ? renderFuturesSentimentLines(
+    data?.preferences?.showFuturesSentiment === false || !(hasFuturesSentimentData(data) || futuresReady)
+      ? []
+      : renderFuturesSentimentLines(
           data?.futuresSentiment || {},
           futuresReady ? '暂无衍生品情绪数据' : '本轮未成功调用 `trading-signal`',
           { inlineLabel: true, maxPanels: 2 }
-        )
-      : [],
+        ),
     data?.preferences?.showExchangeHot === false
       ? []
       : renderRequiredList(
@@ -827,7 +902,7 @@ function renderSquare(data) {
       const score = typeof item?.score === 'number' ? `${item.score}/100` : '未评分';
       const action = item?.action || item?.verdict || '观察';
       lines.push(`${index + 1}. ${symbol}${chain}｜${action}｜${score}`);
-      lines.push(`   ${stringValue(item?.reason, '数据不足，暂不下结论。')}`);
+      lines.push(`↳ ${stringValue(item?.reason, '数据不足，暂不下结论。')}`);
     });
   }
 
@@ -874,12 +949,17 @@ module.exports = {
   renderReport,
   renderSquare,
   renderHelp,
+  defaultHelpCards,
   formatMetrics,
+  formatMetricsCompact,
+  metricsTable,
   stringValue,
   scopeLabel,
   renderRequiredList,
   renderMemeRadarLines,
   renderFuturesSentimentLines,
   finalizeSquareContent,
-  summarizeConclusionText
+  summarizeConclusionText,
+  formatFuturesPanel,
+  formatReadableDollar
 };
